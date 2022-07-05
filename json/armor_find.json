@@ -1,0 +1,52 @@
+{
+    "ImageProcess_blue": {
+        "hsvPara_high": [
+            120,
+            255,
+            255
+        ],
+        "hsvPara_low": [
+            90,
+            185,
+            80
+        ],
+        "GBSet_size": [
+            -1,
+            -1
+        ]
+    },
+    "ImageProcess_red": {
+        "hsvPara_high": [
+            31,
+            255,
+            255
+        ],
+        "hsvPara_low": [
+            0,
+            141,
+            167
+        ],
+        "GBSet_size": [
+            -1,
+            -1
+        ]
+    },
+    "ArmorFind": {
+        "minlighterarea": 19,
+        "maxlighterarea": 100000,
+        "minlighterProp": 4.5,
+        "maxlighterProp": 50.0,
+        "minAngleError": 0.4,
+        "maxAngleError": 72.8,
+        "minarealongRatio": 0.5,
+        "maxarealongRatio": 0.0,
+        "angleDiff": 17.0,
+        "lightBarAreaDiff": 0,
+        "armorAngleMin": 1.5,
+        "minarmorArea": 0,
+        "maxarmorArea": 5,
+        "minarmorProp": 60.0,
+        "maxarmorProp": 18095.0,
+        "kh": 100000.0
+    }
+}

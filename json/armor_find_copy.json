@@ -1,0 +1,57 @@
+{
+    "ArmorFind": {
+        "minlighterarea": 48,
+        "lsRatioMax": 5.7,
+        "minwhRatio": 0,
+        "ratioMin": 1.7,
+        "maxAngleError": 140,
+        "maxlighterarea": 10778,
+        "angleErrMax": 8,
+        "maxCenterDisRatio": 10.4,
+        "minLongSide": 17,
+        "minarea": 0,
+        "maxRatioXY": 1.5,
+        "ratioMax": 24.0,
+        "minAngleError": 30,
+        "range_kw": 0.0,
+        "yDisMax": 7,
+        "minCenterDisRatio": 1.3,
+        "range_kh": 18128,
+        "maxwhRatio": 1000,
+        "maxAlphaAg": 100,
+        "maxarea": 60000,
+        "lsRatioMin": 1.4
+    },
+    "ImageProcess_blue": {
+        "hsvPara_high": [
+            32,
+            255,
+            255
+        ],
+        "GBSet_size": [
+            -1,
+            -1
+        ],
+        "hsvPara_low": [
+            0,
+            113,
+            167
+        ]
+    },
+    "ImageProcess_red": {
+        "hsvPara_high": [
+            91,
+            255,
+            255
+        ],
+        "GBSet_size": [
+            -1,
+            -1
+        ],
+        "hsvPara_low": [
+            0,
+            161,
+            74
+        ]
+    }
+}
