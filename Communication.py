@@ -46,12 +46,12 @@ class MySerial:
 
     def read_communication(self):
         #读取串口参数
-        with open('./common.json','r',encoding = 'utf-8') as load_f:
+        with open('./json/common.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.com = load_dict["UARTSet"]["com"]
             self.bps = load_dict["UARTSet"]["bps"]
             self.timeout = load_dict["UARTSet"]["timeout"]
-        with open('./debug.json','r',encoding = 'utf-8') as load_f:
+        with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.com_debug = load_dict["Debug"]["com_debug"]
             self.com_debug_color = load_dict["Debug"]["com_debug_color"]

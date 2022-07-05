@@ -17,7 +17,7 @@ class GetFrame:
         self.SetCamera()
     
     def read_json(self):
-        with open('./debug.json','r',encoding = 'utf-8') as load_f:
+        with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.video_debug_set = load_dict["Debug"]["video_debug_set"]
             self.video_debug_path = load_dict["Debug"]["video_debug_path"]

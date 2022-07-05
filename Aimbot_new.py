@@ -18,16 +18,12 @@ class GetArmor:
 
     def read_aimbot(self):
         #该函数用于读取自瞄参数
-        if self.mode == 0:
-            self.path = './armor_find.json'
-            self.path_copy = './armor_find_copy.json'
-        elif self.mode == 3:
-            self.path = './sentry_find.json'
-            self.path_copy = './sentry_find_copy.json'
+        if self.mode == 3:
+            self.path = './json/sentry_find.json'
+            self.path_copy = './json/sentry_find_copy.json'
         else:
-            print('error: mode num')
-            self.path = './armor_find.json'
-            self.path_copy = './armor_find_copy.json'
+            self.path = './json/armor_find.json'
+            self.path_copy = './json/armor_find_copy.json'
         with open(self.path,'r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             if self.color == 0:
@@ -69,11 +65,11 @@ class GetArmor:
             self.maxarmorProp = load_dict["ArmorFind"]["maxarmorProp"]
             #测距
             self.kh = load_dict["ArmorFind"]["kh"]
-        with open('./common.json','r',encoding = 'utf-8') as load_f:
+        with open('./json/common.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.__xCenter = load_dict["Aimbot"]["width"]/2
             self.__yCenter = load_dict["Aimbot"]["height"]/2
-        with open('./debug.json','r',encoding = 'utf-8') as load_f:
+        with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.video_debug_set = load_dict["Debug"]["video_debug_set"]
             self.show_debug = load_dict["Debug"]["show_debug"]

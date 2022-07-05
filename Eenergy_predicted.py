@@ -57,7 +57,7 @@ class AnglePredicted():
     
     def read_json(self):
         #读取配置文件
-        with open('./Energy_find_old.json','r',encoding = 'utf-8') as load_f:
+        with open('./json/Energy_find_old.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.delta_angle_distance = load_dict["predicted"]["delta_angle_distance"]
             self.big_energy_a = load_dict["predicted"]["big_energy_a"]
@@ -75,7 +75,7 @@ class AnglePredicted():
             self.frame_diff_list_len_max = load_dict["predicted"]["frame_diff_list_len_max"]
             self.big_energy_t_count_max = load_dict["predicted"]["big_energy_t_count_max"]
             self.history_spd_list_len_max = load_dict["predicted"]["history_spd_list_len_max"]
-        with open('./debug.json','r',encoding = 'utf-8') as load_f:
+        with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.detect_debug = load_dict["Debug"]["detect_auto"]
 

@@ -58,7 +58,7 @@ class GetEnergyMac:
 
     def read_energy(self):
         #该函数用于读取打符参数
-        with open('./Energy_find.json','r',encoding = 'utf-8') as load_f:
+        with open('./json/Energy_find.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             armor = load_dict["Color"]["armor"]
             full = load_dict["Color"]["full"]
@@ -78,13 +78,13 @@ class GetEnergyMac:
             self.hsv_low = np.array(load_dict["tradition"]["hsv_low"]) 
             self.hsv_high = np.array(load_dict["tradition"]["hsv_high"]) 
             self.colors = [armor,full,R]
-        with open('./debug.json','r',encoding = 'utf-8') as load_f:
+        with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.Energy_debug = load_dict["Debug"]["Energy_debug"]
             self.video_debug_set = load_dict["Debug"]["video_debug_set"]
             self.Energy_R_debug = load_dict["Debug"]["Energy_R_debug"]
             self.predict_debug = load_dict["Debug"]["predict_debug"]
-        with open('./common.json','r',encoding = 'utf-8') as load_f:
+        with open('./json/common.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.frame_size = load_dict["Energy_mac"]["width"]
         

@@ -34,7 +34,7 @@ import numpy as np
 import queue
 from GetFrame_windows import GetFrame
 from Communication import MySerial
-from Aimbot_old import GetArmor
+from Aimbot_new import GetArmor
 from EnergyMac import GetEnergyMac
 
 
@@ -200,7 +200,7 @@ class Main:
 
     def get_debug(self):
         #获取debug参数
-        with open('./debug.json','r',encoding = 'utf-8') as load_f:
+        with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             show_debug = load_dict["Debug"]["show_debug"]
             timeout = load_dict["Debug"]["timeout"]

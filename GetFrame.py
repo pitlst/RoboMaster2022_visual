@@ -57,7 +57,7 @@ class GetFrame:
         self.SetCamera()
     
     def read_json(self):
-        with open('./common.json','r',encoding = 'utf-8') as load_f:
+        with open('./json/common.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             #自瞄所需要的相机参数
             aimbot_width = load_dict["Aimbot"]["width"]
@@ -92,7 +92,7 @@ class GetFrame:
             self.offsetX = 0
             self.offsetY = 0
             print('error:unknow mode')
-        with open('./debug.json','r',encoding = 'utf-8') as load_f:
+        with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.video_debug_set = load_dict["Debug"]["video_debug_set"]
             self.video_debug_path = load_dict["Debug"]["video_debug_path"]
