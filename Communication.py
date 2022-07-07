@@ -2,12 +2,13 @@ import serial
 import serial.tools.list_ports
 import json
 import time
+from logger import log
 from struct import *
 
 
 class MySerial:
 
-    def __init__(self):
+    def __init__(self,serial_debug):
         '''串口通信初始化
         @para com: 端口
         @para bps: 波特率
@@ -17,6 +18,7 @@ class MySerial:
         '''
         #读取json文件中的参数
         self.read_communication()
+        self.com_debug = int(serial_debug)
         if self.com_debug == 0:
             while 1:
                 try:
@@ -53,7 +55,6 @@ class MySerial:
             self.timeout = load_dict["UARTSet"]["timeout"]
         with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
-            self.com_debug = load_dict["Debug"]["com_debug"]
             self.com_debug_color = load_dict["Debug"]["com_debug_color"]
             self.com_debug_mode = load_dict["Debug"]["com_debug_mode"]
         
@@ -128,7 +129,7 @@ class MySerial:
                     elif data[1] > 0 and data[1] < 10:
                         my_color = 0
                     else:
-                        print('error: unknow color num')
+                        log.print_error('error: unknow color num')
                         my_color = -1
                     #判断模式为打符还是自瞄，自瞄为0，打小符为1，打大符为2，打哨兵为3
                     if data[2] > 0 or data[2] < 10:
@@ -152,17 +153,18 @@ class MySerial:
 
     def reset_serial(self):
         #在串口失效后重启串口
+        log.print_warning('reset_serial...')
         i = 0
         while 1:
             #重置串口号
             temp = self.com[:-1] + str(i)
-            print(temp)
             i = i + 1
             if i > 10:
                 i = 0 
             try:
                 #尝试重新初始化串口
                 self.my_engine = serial.Serial(temp, self.bps, timeout = self.timeout)
+                log.print_info('reset_serial success')
                 break
             except:
                 continue

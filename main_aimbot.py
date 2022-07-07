@@ -34,7 +34,7 @@ import numpy as np
 import queue
 from GetFrame_windows import GetFrame
 from Communication import MySerial
-from Aimbot_new import GetArmor
+from Aimbot import GetArmor
 
 
 class Main:

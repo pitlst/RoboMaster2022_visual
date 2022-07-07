@@ -10,10 +10,10 @@ class Tracker:
     
     def read_json(self):
         #读取json文件中的参数
-        with open('./armor_find.json','r',encoding = 'utf-8') as load_f:
+        with open('./json/armor_find.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.kh = load_dict["ArmorFind"]["range_kh"]
-        with open('./common.json','r',encoding = 'utf-8') as load_f:
+        with open('./json/common.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             width = load_dict["Aimbot"]["width"]
             height = load_dict["Aimbot"]["height"]
