@@ -1,0 +1,6 @@
+filterpy==1.4.5
+numpy==1.19.5
+opencv_python==4.5.5.64
+openvino==2022.1.0
+openvino_dev==2022.1.0
+pyserial==3.5

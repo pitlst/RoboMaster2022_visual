@@ -78,10 +78,13 @@ class Main:
         #根据标志位开始录像
         if debug_list[4]:
             self.video_debug = True
+            time_tuple = list(time.localtime(time.time()))
+            video_name = '-'
+            video_name = './log/'+video_name.join([str(i) for i in time_tuple])+'.avi'
             if self.mode_init == 0 or self.mode_init == 3:
-                self.video_writer = cv2.VideoWriter(str(time.time())+'.avi', cv2.VideoWriter_fourcc(*'XVID'), 10,(debug_list[5][0],debug_list[5][1]))
+                self.video_writer = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*'XVID'), 5,(debug_list[5][0],debug_list[5][1]))
             elif self.mode_init == 1 or self.mode_init == 2 or self.mode_init == 4 or self.mode_init == 5:
-                self.video_writer = cv2.VideoWriter(str(time.time())+'.avi', cv2.VideoWriter_fourcc(*'XVID'), 8,(debug_list[5][2],debug_list[5][3]))
+                self.video_writer = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*'XVID'), 5,(debug_list[5][2],debug_list[5][3]))
             log.print_info('video writer init done')
         else:
             self.video_debug = False
