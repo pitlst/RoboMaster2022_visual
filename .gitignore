@@ -1,3 +1,5 @@
 videos/*
 __pycache__/*
 log/*
+.gitignore
+.gitignore.swp
