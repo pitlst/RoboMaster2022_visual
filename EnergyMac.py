@@ -15,10 +15,27 @@ class GetEnergyMac:
         self.color = color
         self.debug = debug
         self.video_debug_set = video_debug_set
-        #深度学习初始化
-        self.__openvino_init()
         #读取对应json获取参数
         self.__read_energy()
+        #深度学习初始化
+        self.__openvino_init()
+        #选取模型输入大小
+        self.model_img_size = self.h
+        self.last_x = self.model_img_size/2
+        self.last_y = self.model_img_size/2
+
+        self.fan_armor_distence_max = self.fan_armor_distence_max*self.model_img_size
+        self.fan_armor_distence_min = self.fan_armor_distence_min*self.model_img_size
+        self.armor_R_distance_max = self.armor_R_distance_max*self.model_img_size
+        self.armor_R_distance_min = self.armor_R_distance_min*self.model_img_size
+        #同方向局部nms最大值
+        self.nms_distence_max = self.nms_distence_max*self.model_img_size
+        # 这部分为最大最小面积
+        self.MaxRsS = self.MaxRsS*(self.model_img_size**2)
+        self.MinRsS = self.MinRsS*(self.model_img_size**2)
+        #关于中心丢失判断的相关初始化
+        self.last_center = [-1,-1]
+        self.pass_number = 0
         #初始化打符预测类
         self.AnglePredicted_class = AnglePredicted()
         #记录opencv版本的标志位
@@ -33,16 +50,9 @@ class GetEnergyMac:
         #该函数用于读取打符参数并进行适当处理
         with open('./json/Energy_parameter.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
-            self.MaxRsS = load_dict["tradition"]["MaxRsS"]
-            self.MinRsS = load_dict["tradition"]["MinRsS"]
-            self.MaxRsRatio = load_dict["tradition"]["MaxRsRatio"]
             self.predictAngle = load_dict["tradition"]["predictAngle_small"] 
             self.pass_number_max = load_dict["tradition"]["pass_number_max"] 
             self.nms_distence_max = load_dict["tradition"]["nms_distence_max"] 
-            self.fan_armor_distence_max = load_dict["deep"]["fan_armor_distence_max"]
-            self.fan_armor_distence_min = load_dict["deep"]["fan_armor_distence_min"]
-            self.armor_R_distance_max = load_dict["deep"]["armor_R_distance_max"]
-            self.armor_R_distance_min = load_dict["deep"]["armor_R_distance_min"] 
             self.center_dis_y = load_dict["deep"]["center_dis_y"] 
             self.center_dis_x = load_dict["deep"]["center_dis_x"] 
             self.model_path = load_dict["deep"]["model_path"]
@@ -54,6 +64,15 @@ class GetEnergyMac:
             else:
                 self.hsv_low = np.array(load_dict["hsv"]["hsv_blue_low"]) 
                 self.hsv_high = np.array(load_dict["hsv"]["hsv_blue_high"]) 
+            # 这部分是大符各中心的距离关系，不需要频繁更改。
+            # 实际上对于性能达到正常水平的模型来说，所有在这里的参数都是多余的，这些都只是保险措施，应该用不上。
+            self.MaxRsS = load_dict["EnergyFind"]["MaxRsS"]
+            self.MinRsS = load_dict["EnergyFind"]["MinRsS"]
+            self.MaxRsRatio = load_dict["EnergyFind"]["MaxRsRatio"]
+            self.fan_armor_distence_max = load_dict["EnergyFind"]["fan_armor_distence_max"]
+            self.fan_armor_distence_min = load_dict["EnergyFind"]["fan_armor_distence_min"]
+            self.armor_R_distance_max = load_dict["EnergyFind"]["armor_R_distance_max"]
+            self.armor_R_distance_min = load_dict["EnergyFind"]["armor_R_distance_min"] 
         with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.Energy_R_debug = load_dict["Debug"]["Energy_R_debug"]
@@ -61,24 +80,7 @@ class GetEnergyMac:
         with open('./json/common.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.frame_size = load_dict["Energy_mac"]["width"]
-        #选取模型输入大小
-        self.model_img_size = self.h
-        self.last_x = self.model_img_size/2
-        self.last_y = self.model_img_size/2
-        # 这部分是大符各中心的距离关系，不需要频繁更改。
-        # 实际上对于性能达到正常水平的模型来说，所有在这里的参数都是多余的，这些都只是保险措施，应该用不上。
-        self.fan_armor_distence_max = self.fan_armor_distence_max*self.model_img_size
-        self.fan_armor_distence_min = self.fan_armor_distence_min*self.model_img_size
-        self.armor_R_distance_max = self.armor_R_distance_max*self.model_img_size
-        self.armor_R_distance_min = self.armor_R_distance_min*self.model_img_size
-        #同方向局部nms最大值
-        self.nms_distence_max = self.nms_distence_max*self.model_img_size
-        # 这部分为最大最小面积
-        self.MaxRsS = self.MaxRsS*(self.model_img_size**2)
-        self.MinRsS = self.MinRsS*(self.model_img_size**2)
-        #关于中心丢失判断的相关初始化
-        self.last_center = [-1,-1]
-        self.pass_number = 0
+
         
     def __openvino_init(self):
         #openvino模块的初始化
@@ -88,7 +90,7 @@ class GetEnergyMac:
         self.out_blob = next(iter(self.net.outputs))
         self.net.batch_size = 1
         self.n, self.c, self.h, self.w = self.net.input_info[self.input_blob].input_data.shape
-        self.exec_net = self.ieCore.load_network(network=self.net, device_name='GPU')
+        self.exec_net = self.ieCore.load_network(network=self.net, device_name='CPU')
         #预先获取修改维度后的网格矩阵
         test_image = np.zeros((1,3,self.h,self.w))
         res = self.exec_net.infer(inputs={self.input_blob: test_image})
@@ -313,7 +315,7 @@ class GetEnergyMac:
                     break
         return hit_pos
 
-    def GetHitPointDL(self, frame, f_time, size):
+    def GetHitPointDL(self, frame, f_time):
         #保护图像变量用来画
         x, y, z = -1, -1, -1
         #预处理部分
@@ -355,7 +357,7 @@ class GetEnergyMac:
             y = float(hit_pos[0][1])
             #预测
             if self.predict_debug:
-                x,y = self.AnglePredicted_class.NormalHit(center, x, y, f_time, size)
+                x,y = self.AnglePredicted_class.NormalHit(center, x, y, f_time, self.mode)
                 x = x/self.model_img_size*self.frame_size
                 y = y/self.model_img_size*self.frame_size
 

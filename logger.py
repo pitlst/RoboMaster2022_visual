@@ -68,8 +68,8 @@ class MyVideoWriter:
         file_name_energy = './log/'+'energy_'+video_name.join([str(i) for i in time_tuple])+'.txt'
         self.video_writer_aimbot = cv2.VideoWriter(video_name_aimbot, cv2.VideoWriter_fourcc(*'XVID'), self.video_fps,(self.Aimbot_width,self.Aimbot_height))
         self.video_writer_energy = cv2.VideoWriter(video_name_energy, cv2.VideoWriter_fourcc(*'XVID'), self.video_fps,(self.Energy_mac_width,self.Energy_mac_height))
-        self.file_aimbot = open(file_name_aimbot,'w')
-        self.file_energy = open(file_name_energy,'w')
+        self.file_aimbot = open(file_name_aimbot,'w',encoding="utf-8")
+        self.file_energy = open(file_name_energy,'w',encoding="utf-8")
     
     def __read_json(self):
         with open('./json/common.json','r',encoding = 'utf-8') as load_f:

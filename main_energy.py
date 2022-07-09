@@ -37,6 +37,8 @@ import sys
 import time
 import os
 import signal
+import ctypes
+import inspect
 from Communication import MySerial
 from Aimbot import GetArmor
 from EnergyMac import GetEnergyMac
@@ -101,10 +103,6 @@ class Main:
             fram_time= time.time()
             self.frame.put((frame,fram_time))
             fps += 1
-            #按键退出
-            if break_label:
-                log.print_info('grab_image return')
-                break
             #录像
             if self.video_debug:
                 temp_num += 1
@@ -114,7 +112,7 @@ class Main:
                     video_writer.write(frame,fram_time)
             #每隔一秒输出一次帧率
             if time.time()-t0 > 1:
-                log.print_info('fps:',fps)
+                log.print_info('fps:'+str(fps))
                 fps = 0
                 t0 = time.time()
             #在最开始的时候获取颜色信息重启摄像头，在之后用于检查模式信息
@@ -157,10 +155,6 @@ class Main:
                 elif reset_label in [1,2,4,5]:
                     msg_temp = list(self.GetEnergyMac_class.GetHitPointDL(frame,f_time))
             self.MySerial_class.send_message(msg_temp)
-            #按键退出
-            if break_label:
-                log.print_info('post_process return')
-                break
 
     
     def debug_show(self):
@@ -185,7 +179,7 @@ class Main:
                 cv2.destroyAllWindows()
                 self.__break_thread()
                 log.print_info('debug_show return')
-                break
+                sys.exit()
 
 
     def __get_debug(self,command_input):
@@ -215,42 +209,72 @@ class Main:
         return serial_debug, source_path, timeout, kalmanfilter_enable, video_writer_debug, video_interval_fps
     
     def __break_thread(self):
-        #退出线程执行函数
+        #debug下退出线程执行函数
         global break_label
         self.GetFrame_class.EndCamera()
         video_writer.release()
         break_label = True
+        
 
 #定义线程退出回调函数
 def quit(signum, frame):
-    global break_label
     log.print_info('get return sigh')
-    break_label = True
-    
+    stop_thread(post_process_thread)
+    stop_thread(grab_image_thread)
+    stop_thread(debug_show_thread)
+
+#通过手动引起异常终止线程
+def stop_thread(th):
+    th_id = th.ident
+    th_id = ctypes.c_long(th_id)
+    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(th_id, ctypes.py_object(SystemExit))
+    if res == 0:
+        raise ValueError("成功退出程序 序号："+str(th.ident))
+    elif res != 1:
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(th_id, None)
+        raise SystemError("PyThreadState_SetAsyncExc failed")
+
+#定义一个看门狗，程序非正常运行直接杀死线程，shell脚本会重新运行程序
+def watch_dog():
+    while True:
+        if post_process_thread.is_alive() and grab_image_thread.is_alive():
+            time.sleep(5)
+            log.print_info('watchdog alive')
+        else:
+            log.print_error('watchdog died')
+            stop_thread(post_process_thread)
+            stop_thread(grab_image_thread)
+            stop_thread(debug_show_thread)
+
 
 #程序从这里开始
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='TOE实验室视觉步兵程序调试帮助')
     parser.add_argument('--debug','-d', action='store_true', help='是否开启滑动条调参/debug模式,不输入默认不开启')
+    parser.add_argument('--breakpoint','-b', action='store_true', help='是否开启断点模式,不输入默认不开启')
     parser.add_argument('--serial','-c', action='store_true', help='是否开启串口,不输入默认开启，输入后串口传入值固定从debug.json读取')
     parser.add_argument('--source','-s', type=str, default='HIVISION', help='输入识别数据的来源，可以是视频的路径或者图片文件夹的路径，不输入该选项默认海康摄像头，输入该选项默认usb摄像头')
     input = parser.parse_args()
     #日志设置输出等级，必须在最前
     log.set_level(input.debug)
-    #开始截获终止信号
+    #若开启断点调试，导入库并初始化
+    if input.breakpoint:
+        import ipdb;ipdb.set_trace()
+    #开始截获命令行的终止信号
     signal.signal(signal.SIGINT, quit)
     # 程序初始化
     infantry = Main(input)
     grab_image_thread = threading.Thread(target=infantry.grab_image)
     post_process_thread = threading.Thread(target=infantry.post_process)
     debug_show_thread = threading.Thread(target=infantry.debug_show)
+    #设置各个线程为后台线程，保证一次性杀死
+    post_process_thread.daemon = True
+    grab_image_thread.daemon = True
+    debug_show_thread.daemon = True
     #启动线程
     post_process_thread.start()
     grab_image_thread.start()
     debug_show_thread.start()
-    #主线程等待执行结束
-    post_process_thread.join()
-    grab_image_thread.join()
-    debug_show_thread.join()
-    log.print_info('main return')
-    sys.exit()
+    #运行看门狗
+    watch_dog()
+

@@ -52,12 +52,10 @@ class AnglePredicted():
         #速度目标函数 spd = a*sin(w*t)+b
         #速度目标函数系数相位
         self.big_energy_t = None
-        #打印日志文件的文件类
-        self.f = open(self.path_log,'w')
     
     def read_json(self):
         #读取配置文件
-        with open('./json/Energy_find_old.json','r',encoding = 'utf-8') as load_f:
+        with open('./json/Energy_parameter.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.delta_angle_distance = load_dict["predicted"]["delta_angle_distance"]
             self.big_energy_a = load_dict["predicted"]["big_energy_a"]

@@ -20,12 +20,9 @@ class MySerial:
         self.read_communication()
         self.com_debug = int(serial_debug)
         if self.com_debug == 0:
-            while 1:
-                try:
-                    self.my_engine = serial.Serial(self.com, self.bps, timeout = self.timeout)
-                    break
-                except:
-                    self.reset_serial()
+            self.my_engine = serial.Serial(self.com, self.bps, timeout = self.timeout)
+
+
         #这是crc校验用的，需要与电控统一
         self.crc8=[
             0x00,0x31,0x62,0x53,0xc4,0xf5,0xa6,0x97,0xb9,0x88,0xdb,0xea,0x7d,0x4c,0x1f,0x2e,
@@ -67,15 +64,9 @@ class MySerial:
         z = float(m[2])
         #将数据打包
         m = self.pack_data(x,y,z)
-        #print(int(x),int(y),int(z))
         #数据串口发送
         if self.com_debug == 0:
-            while 1:
-                try:
-                    self.my_engine.write(m)
-                    break
-                except:
-                    self.reset_serial()
+            self.my_engine.write(m)
 
 
     def get_msg_first(self):
@@ -110,12 +101,7 @@ class MySerial:
         data = []
         #判断是否debug
         if self.com_debug == 0:
-            while 1:
-                try:
-                    data = self.my_engine.readlines()
-                    break
-                except:
-                    self.reset_serial()
+            data = self.my_engine.readlines()
             #判断是否接受到信息
             if len(data):
                 data = data[-1]
@@ -150,24 +136,6 @@ class MySerial:
         #关闭串口
         if self.com_debug == 0:
             self.my_engine.close()
-
-    def reset_serial(self):
-        #在串口失效后重启串口
-        log.print_warning('reset_serial...')
-        i = 0
-        while 1:
-            #重置串口号
-            temp = self.com[:-1] + str(i)
-            i = i + 1
-            if i > 10:
-                i = 0 
-            try:
-                #尝试重新初始化串口
-                self.my_engine = serial.Serial(temp, self.bps, timeout = self.timeout)
-                log.print_info('reset_serial success')
-                break
-            except:
-                continue
 
 
 #以下部分暂时未使用，视电控需要随时更改
