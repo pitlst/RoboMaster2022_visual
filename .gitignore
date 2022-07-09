@@ -1,6 +1,6 @@
 videos/*
 __pycache__/*
 model/*.onnx
-model/*.onnx
-log/*.mapping
+model/*.mapping
+log/*
 .gitignore.swp
