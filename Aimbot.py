@@ -21,6 +21,12 @@ class GetArmor:
         self.read_aimbot()
         if self.debug:
             self.t0 = time.time()
+    
+    def reinit(self,color,mode):
+        #更改变量时重初始化，更新参数
+        self.mode = mode
+        self.color = color
+        self.read_aimbot()
 
     def read_aimbot(self):
         #该函数用于读取自瞄参数
@@ -97,6 +103,7 @@ class GetArmor:
         x,y,z = self.CombineLightBar(lightBarList)#非卡尔曼滤波，将灯条拼凑成装甲板
         #根据debug参数确定显示图像
         if self.debug:
+            self.mask = mask
             cv2.imshow('frame_debug',self.frame_debug)
             cv2.imshow('mask',mask)
             self.updata_argument()
@@ -407,3 +414,7 @@ class GetArmor:
     def nothing(self,*arg):
         #空的回调函数
         pass
+
+    def get_debug_frame(self):
+        #返回显示所需要的debug图像
+        return self.frame_debug,self.mask

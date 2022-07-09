@@ -10,7 +10,7 @@ class MyLogging:
         #如果类中已经存在文件名，证明已初始化过，不再二次生成
         if hasattr(self,'value') == False:
             self.log_name = '-'
-            self.log_name = './log/'+self.log_name.join([str(i) for i in time_tuple])+'.txt'
+            self.log_name = './log/'+self.log_name.join([str(i) for i in time_tuple])
         self.logger = logging.getLogger()
         formatter = logging.Formatter("%(asctime)s:%(levelname)s:%(message)s", '%Y-%m-%d %H:%M:%S')
         #命令行日志输出记录
@@ -53,15 +53,23 @@ class MyLogging:
     def print_critical(content):
         logging.critical(content)
 
+
+
 class MyVideoWriter:
     def __init__(self):
         #相机类初始化
         self.__read_json()
+        self.mode = 1
         time_tuple = list(time.localtime(time.time()))
         video_name = '-'
-        video_name = './log/'+video_name.join([str(i) for i in time_tuple])+'.avi'
-        self.video_writer_aimbot = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*'XVID'), self.video_fps,(self.Aimbot_width,self.Aimbot_height))
-        self.video_writer_energy = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*'XVID'), self.video_fps,(self.Energy_mac_width,self.Energy_mac_height))
+        video_name_aimbot = './log/'+'aimbot_'+video_name.join([str(i) for i in time_tuple])+'.avi'
+        video_name_energy = './log/'+'energy_'+video_name.join([str(i) for i in time_tuple])+'.avi'
+        file_name_aimbot = './log/'+'aimbot_'+video_name.join([str(i) for i in time_tuple])+'.txt'
+        file_name_energy = './log/'+'energy_'+video_name.join([str(i) for i in time_tuple])+'.txt'
+        self.video_writer_aimbot = cv2.VideoWriter(video_name_aimbot, cv2.VideoWriter_fourcc(*'XVID'), self.video_fps,(self.Aimbot_width,self.Aimbot_height))
+        self.video_writer_energy = cv2.VideoWriter(video_name_energy, cv2.VideoWriter_fourcc(*'XVID'), self.video_fps,(self.Energy_mac_width,self.Energy_mac_height))
+        self.file_aimbot = open(file_name_aimbot,'w')
+        self.file_energy = open(file_name_energy,'w')
     
     def __read_json(self):
         with open('./json/common.json','r',encoding = 'utf-8') as load_f:
@@ -74,10 +82,25 @@ class MyVideoWriter:
             load_dict = json.load(load_f,strict=False)
             self.video_fps = int(load_dict["Debug"]["video_fps"])
     
-    def write(self,frame):
-        pass
+    def write(self,frame,time):
+        if self.mode:
+            self.video_writer_energy.write(frame)
+            self.file_energy.write(str(time))
+        else:
+            self.video_writer_aimbot.write(frame)
+            self.file_aimbot.write(str(time))
+    
+    def set_mode(self,mode):
+        if mode in [1,2,4,5]:
+            self.mode = 1
+        else:
+            self.mode = 0
+    
+    def release(self):
+        self.video_writer_aimbot.release()
+        self.video_writer_aimbot.release()
 
-#调用logger模块时只进行一次初始化，引用时只使用已经实例化的对象
+#调用本文件时只进行一次初始化，引用时只使用已经实例化的对象
 if __name__ == 'logger':
     log = MyLogging()
     video_writer = MyVideoWriter()

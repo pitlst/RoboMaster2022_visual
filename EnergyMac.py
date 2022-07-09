@@ -33,9 +33,6 @@ class GetEnergyMac:
         #该函数用于读取打符参数并进行适当处理
         with open('./json/Energy_parameter.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
-            armor = load_dict["Color"]["armor"]
-            full = load_dict["Color"]["full"]
-            R = load_dict["Color"]["R"]
             self.MaxRsS = load_dict["tradition"]["MaxRsS"]
             self.MinRsS = load_dict["tradition"]["MinRsS"]
             self.MaxRsRatio = load_dict["tradition"]["MaxRsRatio"]
@@ -57,7 +54,6 @@ class GetEnergyMac:
             else:
                 self.hsv_low = np.array(load_dict["hsv"]["hsv_blue_low"]) 
                 self.hsv_high = np.array(load_dict["hsv"]["hsv_blue_high"]) 
-            self.colors = [armor,full,R]
         with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.Energy_R_debug = load_dict["Debug"]["Energy_R_debug"]
@@ -80,6 +76,9 @@ class GetEnergyMac:
         # 这部分为最大最小面积
         self.MaxRsS = self.MaxRsS*(self.model_img_size**2)
         self.MinRsS = self.MinRsS*(self.model_img_size**2)
+        #关于中心丢失判断的相关初始化
+        self.last_center = [-1,-1]
+        self.pass_number = 0
         
     def __openvino_init(self):
         #openvino模块的初始化
@@ -96,6 +95,12 @@ class GetEnergyMac:
         #这部分anchors随着训练时的参数变化，一般不用再次聚类去求。
         self.anchors = np.array([[[[[[23,29]]],  [[[43,55]]],  [[[73,105]]]]],[[[[[146,217]]],  [[[231,300]]],  [[[335,433]]]]],[[[[[4,5]]],  [[[8,10]]],  [[[13,16]]]]]])
         self.p_mat,self.p_gd = self.mat_process(res)
+
+    def reinit(self,color,mode):
+        #根据更新的颜色信息更换变量
+        self.color = color
+        self.mode = mode
+        self.__read_energy()
     
     def mat_process(self,res):        
         #预先获取扩充维度的网格矩阵
@@ -213,10 +218,10 @@ class GetEnergyMac:
     
 
     def center_filter(self,center,center_tradition):
-        #对R进行筛选，根据debug参数选择方案
+        #对R进行筛选，根据debug参数选择方案，有待优化
         Center = []
         if self.Energy_R_debug == 0:
-            #纯深度学习方案
+            #纯深度学习，未完成
             if len(center):
                 for j,temp_j in enumerate(center):
                     if len(Center) == 0:
@@ -227,8 +232,8 @@ class GetEnergyMac:
             else:
                 Center = []
         elif self.Energy_R_debug == 1:
-            #纯传统视觉方案
-            pass
+            #纯传统视觉,未完成
+            Center = center_tradition[0]
         elif self.Energy_R_debug == 2:
             #对传统center与深度学习center取交集
             if len(center_tradition):
@@ -250,8 +255,21 @@ class GetEnergyMac:
             else:
                 Center = []
         elif self.Energy_R_debug == 3:
-            #深度学习丢失后用传统视觉弥补
-            pass
+            #深度学习丢失后用传统视觉弥补，未完成
+            if center_tradition[0] != -1 or center_tradition[1] != -1:
+                if center[0] == -1 or center[1] == -1 or (center[0]-self.last_center[0])**2+(center[1]-self.last_center[1])**2>300:
+                    center = center_tradition
+            if center[0] != -1 or center[1] != -1:
+                self.last_center = center
+                if self.pass_number != 0:
+                    self.pass_number = 0
+            elif self.last_center[0] != -1 or self.last_center[1] != -1:
+                center = self.last_center
+                self.pass_number += 1
+                if self.pass_number > self.pass_number_max:
+                    self.last_center = [-1,-1]
+            else:
+                Center = []
         else:
             Center = []
 
@@ -296,35 +314,29 @@ class GetEnergyMac:
         return hit_pos
 
     def GetHitPointDL(self, frame, f_time, size):
-        #size是大小符
         #保护图像变量用来画
         x, y, z = -1, -1, -1
         #预处理部分
         if self.video_debug_set == 0:
             frame = cv2.cvtColor(frame, cv2.COLOR_BayerRG2RGB)
-        if self.debug:
-            img3 = frame.copy()
         if frame.shape[:-1] != (self.h, self.w):
-            frame = cv2.resize(frame,(self.w,self.h))
+            frame_reasize = cv2.resize(frame,(self.w,self.h))
+        else:
+            frame_reasize = frame
         # 传统视觉部分,根据debug参数启用
         # 传统视觉识别R是为了弥补家里的大符的无奈之举，比赛时一般不会出现如此极端的情况
         if self.Energy_R_debug:
-            frame_tran = frame.copy()
-            mask = self.HSV_Process(frame_tran)
+            mask = self.HSV_Process(frame_reasize)
             center_tradition = self.FindRsignScope(mask)
         else:
             center_tradition = [-1,-1,-1,-1]
-        if self.debug:
-            img = frame.copy()
-            img2 = frame.copy()
-            img2_1 = frame.copy()
         #深度学习部分
-        frame = frame.astype('float32')
-        frame = frame/255  #像素归一化
-        frame = frame.transpose((2,0,1))
-        frame = np.expand_dims(frame,axis=0)
+        frame_deal = frame_reasize.astype('float32')
+        frame_deal = frame_deal/255  #像素归一化
+        frame_deal = frame_deal.transpose((2,0,1))
+        frame_deal = np.expand_dims(frame_deal,axis=0)
         #推理
-        res = self.exec_net.infer(inputs={self.input_blob: frame})
+        res = self.exec_net.infer(inputs={self.input_blob: frame_deal})
         #后处理
         pred = self.process(res)
         center, result= self.my_nms(pred)
@@ -350,23 +362,23 @@ class GetEnergyMac:
 
         #画出图像,
         if self.debug:
+            self.img4 = frame.copy()
+            self.img = frame_reasize.copy()
+            self.img2 = frame_reasize.copy()
+            self.img3 = frame_reasize.copy()
             result = np.array(result)
-            img = self.draw_pred(img,pred[0],center)
-            img = self.draw_center(img,center)
-            img2 = self.draw_pred(img2,result,center)
-            img2 = self.draw_center(img2,center)
-            cv2.circle(img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_max),self.colors[2],1)
-            cv2.circle(img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_min),self.colors[2],1)
-            cv2.circle(img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.nms_distence_max),self.colors[0],1)
-            cv2.circle(img2,(int(center[0]),int(center[1])),int(self.armor_R_distance_max),self.colors[2],1)
-            cv2.circle(img2,(int(center[0]),int(center[1])),int(self.armor_R_distance_min),self.colors[2],1)
-            cv2.circle(img3,(int(x),int(y)),4,(255,255,255),-1)
+            self.img = self.draw_pred(self.img,pred[0],center)
+            self.img = self.draw_center(self.img,center)
+            self.img2 = self.draw_pred(self.img2,result,center)
+            self.img2 = self.draw_center(self.img2,center)
+            cv2.circle(self.img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_max),self.colors[2],1)
+            cv2.circle(self.img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_min),self.colors[2],1)
+            cv2.circle(self.img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.nms_distence_max),self.colors[0],1)
+            cv2.circle(self.img2,(int(center[0]),int(center[1])),int(self.armor_R_distance_max),self.colors[2],1)
+            cv2.circle(self.img2,(int(center[0]),int(center[1])),int(self.armor_R_distance_min),self.colors[2],1)
+            cv2.circle(self.img4,(int(x),int(y)),4,(255,255,255),-1)
             for c_t in center_tradition:
-                cv2.circle(img2_1,(int(c_t[0]),int(c_t[1])),8,(255,255,255),-1)
-            cv2.imshow("img",img)
-            cv2.imshow("img2",img2)
-            cv2.imshow("img2_1",img2_1)
-            cv2.imshow("img3",img3)
+                cv2.circle(self.img3,(int(c_t[0]),int(c_t[1])),8,(255,255,255),-1)
             self.updata_argument()
             #每隔1秒更新一次json文件
             if time.time()-self.t0 > 1:
@@ -417,9 +429,11 @@ class GetEnergyMac:
                 break
         return Center_return
 
-    def draw_pred(self,img,pred,center):
+    @staticmethod
+    def draw_pred(img,pred,center):
         #画出来的，按自己喜好来就可以了，深度学习检测基本不用实时调参，不咋重要
         #这个画扇叶和装甲板
+        colors = [[255,255,0],[0,255,0],[0,255,255]]
         if pred.all() != None or len(center):
             for det in pred:
                 x = det[0]
@@ -428,7 +442,16 @@ class GetEnergyMac:
                 w = det[3]
                 vectorX = x - center[0]
                 vectorY = y - center[1]
-                label = self.get_cls(det)
+                if det[5]>det[6]:
+                    if det[5] > det[7]:
+                        label = 0
+                    else:
+                        label = 2
+                else:
+                    if det[6] > det[7]:
+                        label = 1
+                    else:
+                        label = 2
                 box = []
 
                 if vectorX > 0 and vectorY > 0:
@@ -465,13 +488,14 @@ class GetEnergyMac:
                 box.append([x3,y3])
                 box = np.array(box,dtype = 'int32')
 
-                cv2.drawContours(img,[box],0,self.colors[label],1)
-                cv2.circle(img,(int(x),int(y)),4,self.colors[label],-1)
+                cv2.drawContours(img,[box],0,colors[label],1)
+                cv2.circle(img,(int(x),int(y)),4,colors[label],-1)
         else:
             log.print_error('No box is available')
         return img
 
-    def draw_center(self,img,center):
+    @staticmethod
+    def draw_center(img,center):
         #画出来的，按自己喜好来就可以了，深度学习检测基本不用实时调参，不咋重要
         angle = 0
         box = []
@@ -493,8 +517,8 @@ class GetEnergyMac:
             y3 = y + h/2*math.sin(angle) - w/2*math.cos(angle)
             box.append([x3,y3])
             box = np.array(box,dtype = 'int32')          
-            cv2.drawContours(img,[box],0,self.colors[2],1)
-            cv2.circle(img,(int(center[0]),int(center[1])),4,self.colors[2],-1)
+            cv2.drawContours(img,[box],0,(0,255,0),1)
+            cv2.circle(img,(int(center[0]),int(center[1])),4,(0,255,0),-1)
         else:
             log.print_error('No box is available')
         return img
@@ -530,6 +554,14 @@ class GetEnergyMac:
             cv2.createTrackbar('highSat', 'energyTest', self.hsv_high[1], 255, self.nothing)
             cv2.createTrackbar('highVal', 'energyTest', self.hsv_high[2], 255, self.nothing)
 
+            cv2.createTrackbar('MaxRsS0.0000', 'energyTest', int(self.MaxRsS/self.model_img_size*10000), 100, self.nothing)
+            cv2.createTrackbar('MinRsS0.0000', 'energyTest', int(self.MinRsS/self.model_img_size*10000), 100, self.nothing)
+            cv2.createTrackbar('MaxRsRatio0.000', 'energyTest', int(self.MaxRsRatio/self.model_img_size/self.model_img_size*1000), 100, self.nothing)
+            cv2.createTrackbar('fan_armor_distence_max0.000', 'energyTest', int(self.fan_armor_distence_max/self.model_img_size*1000), 255, self.nothing)
+            cv2.createTrackbar('fan_armor_distence_min0.000', 'energyTest', int(self.fan_armor_distence_min/self.model_img_size*1000), 255, self.nothing)
+            cv2.createTrackbar('armor_R_distance_max0.000', 'energyTest', int(self.armor_R_distance_max/self.model_img_size*1000), 255, self.nothing)
+            cv2.createTrackbar('armor_R_distance_min0.000', 'energyTest', int(self.armor_R_distance_min/self.model_img_size*1000), 255, self.nothing)
+
 
     def updata_argument(self):
         #根据debug更新参数
@@ -542,6 +574,13 @@ class GetEnergyMac:
             highVal = cv2.getTrackbarPos('highVal', 'energyTest')
             self.hsv_high = np.array([highHue,highSat,highVal])
             self.hsv_low = np.array([lowHue,lowSat,lowVal])
+            self.MaxRsS = float(cv2.getTrackbarPos('MaxRsS0.0000', 'energyTest'))/10000*self.model_img_size
+            self.MinRsS = float(cv2.getTrackbarPos('MinRsS0.0000', 'energyTest'))/10000*self.model_img_size
+            self.MaxRsRatio = float(cv2.getTrackbarPos('MaxRsRatio0.000', 'energyTest'))/1000*self.model_img_size
+            self.fan_armor_distence_max = float(cv2.getTrackbarPos('fan_armor_distence_max0.000', 'energyTest'))/1000*self.model_img_size
+            self.fan_armor_distence_min = float(cv2.getTrackbarPos('fan_armor_distence_min0.000', 'energyTest'))/1000*self.model_img_size
+            self.armor_R_distance_max = float(cv2.getTrackbarPos('armor_R_distance_max0.000', 'energyTest'))/1000*self.model_img_size
+            self.armor_R_distance_min = float(cv2.getTrackbarPos('armor_R_distance_min0.000', 'energyTest'))/1000*self.model_img_size
 
     def update_json(self):
         #更新json文件中的参数
@@ -554,6 +593,13 @@ class GetEnergyMac:
                 else:
                     load_dict["hsv"]["hsv_blue_high"] = [int(x) for x in list(self.hsv_high)]
                     load_dict["hsv"]["hsv_blue_low"] = [int(x) for x in list(self.hsv_low)]
+                load_dict["EnergyFind"]["MaxRsS"] = self.MaxRsS/self.model_img_size
+                load_dict["EnergyFind"]["MinRsS"] = self.MinRsS/self.model_img_size
+                load_dict["EnergyFind"]["MaxRsRatio"] = self.MaxRsRatio/self.model_img_size
+                load_dict["EnergyFind"]["fan_armor_distence_max"] = self.fan_armor_distence_max/self.model_img_size
+                load_dict["EnergyFind"]["fan_armor_distence_min"] = self.fan_armor_distence_min/self.model_img_size
+                load_dict["EnergyFind"]["armor_R_distance_max"] = self.armor_R_distance_max/self.model_img_size
+                load_dict["EnergyFind"]["armor_R_distance_min"] = self.armor_R_distance_min/self.model_img_size
                 dump_dict = load_dict
             with open('./json/Energy_find.json','w',encoding = 'utf-8') as load_f:
                json.dump(dump_dict,load_f,indent=4,ensure_ascii=False)
@@ -566,3 +612,7 @@ class GetEnergyMac:
     def nothing(self,*arg):
         #空的回调函数
         pass
+
+    def get_debug_frame(self):
+        #返回显示所需要的debug图像
+        return self.img, self.img2, self.img3, self.img4
