@@ -1,5 +1,7 @@
-import logging
+import cv2
 import time
+import json
+import logging
 
 class MyLogging:
     def __init__(self):
@@ -51,6 +53,32 @@ class MyLogging:
     def print_critical(content):
         logging.critical(content)
 
+class MyVideoWriter:
+    def __init__(self):
+        #相机类初始化
+        self.__read_json()
+        time_tuple = list(time.localtime(time.time()))
+        video_name = '-'
+        video_name = './log/'+video_name.join([str(i) for i in time_tuple])+'.avi'
+        self.video_writer_aimbot = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*'XVID'), self.video_fps,(self.Aimbot_width,self.Aimbot_height))
+        self.video_writer_energy = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*'XVID'), self.video_fps,(self.Energy_mac_width,self.Energy_mac_height))
+    
+    def __read_json(self):
+        with open('./json/common.json','r',encoding = 'utf-8') as load_f:
+            load_dict = json.load(load_f,strict=False)
+            self.Aimbot_width = load_dict["Aimbot"]["width"]
+            self.Aimbot_height = load_dict["Aimbot"]["height"]
+            self.Energy_mac_width = load_dict["Energy_mac"]["width"]
+            self.Energy_mac_height = load_dict["Energy_mac"]["height"]
+        with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
+            load_dict = json.load(load_f,strict=False)
+            self.video_fps = int(load_dict["Debug"]["video_fps"])
+    
+    def write(self,frame):
+        pass
+
 #调用logger模块时只进行一次初始化，引用时只使用已经实例化的对象
 if __name__ == 'logger':
     log = MyLogging()
+    video_writer = MyVideoWriter()
+

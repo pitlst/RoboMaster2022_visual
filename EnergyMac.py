@@ -29,8 +29,6 @@ class GetEnergyMac:
         if self.debug:
             self.t0 = time.time()
 
-    
-
     def __read_energy(self):
         #该函数用于读取打符参数并进行适当处理
         with open('./json/Energy_parameter.json','r',encoding = 'utf-8') as load_f:
@@ -178,8 +176,6 @@ class GetEnergyMac:
         #注意，待打击点是会有坐标突变的，但是中心不会，因此，中心坐标如果突变，需要筛去
         result = []
         center = []
-        Center = []
-        
         for i in p[0]:
             cls = self.get_cls(i)
             if cls == 2:
@@ -213,54 +209,57 @@ class GetEnergyMac:
                                     break
                     if add:
                         result.append(i)
-
-
-        #对传统center与深度学习center取交集
-        # if len(center_tradition):
-        #     for j, temp_j in enumerate(center):
-        #         label = 1
-        #         for i,temp_i in enumerate(center_tradition):
-        #             if (temp_i[0]-temp_j[0])**2+(temp_i[1]-temp_j[1])**2 < self.nms_distence_max**2:
-        #                 label = 0
-        #                 break
-        #         if label:
-        #             del center[j]
-
-        #     for j,temp_j in enumerate(center):
-        #         if len(Center) == 0:
-        #             Center = temp_j
-        #         else:
-        #             if Center[4] < temp_j[4]:
-        #                 Center = temp_j
-        # else:
-        #     Center = []
-
-        if len(center):
-            for j,temp_j in enumerate(center):
-                if len(Center) == 0:
-                    Center = temp_j
-                else:
-                    if Center[4] < temp_j[4]:
-                        Center = temp_j
-        else:
-            Center = []
-
-
-
-        return Center,result
+        return center,result
     
 
     def center_filter(self,center,center_tradition):
         #对R进行筛选，根据debug参数选择方案
         Center = []
+        if self.Energy_R_debug == 0:
+            #纯深度学习方案
+            if len(center):
+                for j,temp_j in enumerate(center):
+                    if len(Center) == 0:
+                        Center = temp_j
+                    else:
+                        if Center[4] < temp_j[4]:
+                            Center = temp_j
+            else:
+                Center = []
+        elif self.Energy_R_debug == 1:
+            #纯传统视觉方案
+            pass
+        elif self.Energy_R_debug == 2:
+            #对传统center与深度学习center取交集
+            if len(center_tradition):
+                for j, temp_j in enumerate(center):
+                    label = 1
+                    for i,temp_i in enumerate(center_tradition):
+                        if (temp_i[0]-temp_j[0])**2+(temp_i[1]-temp_j[1])**2 < self.nms_distence_max**2:
+                            label = 0
+                            break
+                    if label:
+                        del center[j]
 
-
+                for j,temp_j in enumerate(center):
+                    if len(Center) == 0:
+                        Center = temp_j
+                    else:
+                        if Center[4] < temp_j[4]:
+                            Center = temp_j
+            else:
+                Center = []
+        elif self.Energy_R_debug == 3:
+            #深度学习丢失后用传统视觉弥补
+            pass
+        else:
+            Center = []
 
         if len(Center):
             Center = Center[0:4]
         else:
             Center = [-1,-1,-1,-1]
-        
+
         return Center
     
     def energy_filter(self,center,result):
@@ -373,7 +372,6 @@ class GetEnergyMac:
             if time.time()-self.t0 > 1:
                 self.update_json()
                 self.t0 = time.time()
-
 
         return x,y,z
 

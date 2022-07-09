@@ -109,8 +109,7 @@ class GetFrame:
             self.exposure_time = 2000
             self.offsetX = 0
             self.offsetY = 0
-            
-    
+
 
     def StartCamera(self):
         if self.video_debug_set == 1:

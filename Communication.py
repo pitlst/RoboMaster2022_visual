@@ -145,7 +145,7 @@ class MySerial:
         else:
             #开启串口debug模式后，不再接受电控的消息，固定传值
             return self.com_debug_color, self.com_debug_mode
-    
+
     def close_engine(self):
         #关闭串口
         if self.com_debug == 0:

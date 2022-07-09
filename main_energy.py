@@ -36,6 +36,7 @@ import argparse
 import sys
 import time
 import os
+import keyboard
 from Communication import MySerial
 from Aimbot import GetArmor
 from EnergyMac import GetEnergyMac
@@ -76,18 +77,10 @@ class Main:
         self.GetEnergyMac_class = GetEnergyMac(self.debug,self.video_debug_set,self.color_init)
         log.print_info('energy init done')
         #根据标志位开始录像
-        if debug_list[4]:
-            self.video_debug = True
-            time_tuple = list(time.localtime(time.time()))
-            video_name = '-'
-            video_name = './log/'+video_name.join([str(i) for i in time_tuple])+'.avi'
-            if self.mode_init == 0 or self.mode_init == 3:
-                self.video_writer = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*'XVID'), 5,(debug_list[5][0],debug_list[5][1]))
-            elif self.mode_init == 1 or self.mode_init == 2 or self.mode_init == 4 or self.mode_init == 5:
-                self.video_writer = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*'XVID'), 5,(debug_list[5][2],debug_list[5][3]))
+        self.video_debug = int(debug_list[4])
+        if self.video_debug:
+            self.__video_writer_init(debug_list[5])
             log.print_info('video writer init done')
-        else:
-            self.video_debug = False
         log.print_info('all module init done')
  
 
@@ -99,6 +92,7 @@ class Main:
         new = [-1,-1]
         old = [self.color_init,self.mode_init]
         temp_num = 0
+        temp_num_max = int(self.debug_list[6])
         while 1:
             #按键退出
             if self.break_all.full():
@@ -112,10 +106,11 @@ class Main:
             frame = self.GetFrame_class.GetOneFrame()
             self.frame.put((frame,time.time()))
             fps += 1
+            #录像
             if self.video_debug:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BayerRG2RGB)
                 temp_num += 1
-                if temp_num > 20:
+                if temp_num > temp_num_max:
                     temp_num = 0
                     self.video_writer.write(frame)
             #在最开始的时候获取颜色信息重启摄像头，在之后用于检查模式信息
@@ -222,6 +217,7 @@ class Main:
             timeout = load_dict["Debug"]["timeout"]
             kalmanfilter_enable = load_dict["Debug"]["kalmanfilter_enable"]
             video_writer_debug = load_dict["Debug"]["video_writer"]
+            video_interval_fps = load_dict["Debug"]["video_interval_fps"]
             if video_writer_debug:
                 with open('./json/common.json','r',encoding = 'utf-8') as load_f:
                     load_dict = json.load(load_f,strict=False)
@@ -244,7 +240,10 @@ class Main:
         else:
             self.video_debug_set = 0
 
-        return serial_debug, source_path, timeout, kalmanfilter_enable, video_writer_debug, video_writer_list
+        return serial_debug, source_path, timeout, kalmanfilter_enable, video_writer_debug, video_writer_list, video_interval_fps
+
+
+
 
 
 #程序从这里开始
@@ -254,7 +253,7 @@ if __name__ == '__main__':
     parser.add_argument('--serial','-c', action='store_true', help='是否开启串口,不输入默认开启，输入后串口传入值固定从debug.json读取')
     parser.add_argument('--source','-s', type=str, default='HIVISION', help='输入识别数据的来源，可以是视频的路径或者图片文件夹的路径，不输入该选项默认海康摄像头，输入该选项默认usb摄像头')
     input = parser.parse_args()
-    #日志系统初始化，必须在最前
+    #日志设置输出等级，必须在最前
     log.set_level(input.debug)
     # 程序初始化
     infantry = Main(input)
