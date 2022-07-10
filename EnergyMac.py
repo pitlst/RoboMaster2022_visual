@@ -5,7 +5,6 @@ import time
 import numpy as np
 from logger import log
 from openvino.inference_engine import IECore
-from Eenergy_predicted import AnglePredicted
 
 class GetEnergyMac:
     
@@ -36,8 +35,6 @@ class GetEnergyMac:
         #关于中心丢失判断的相关初始化
         self.last_center = [-1,-1]
         self.pass_number = 0
-        #初始化打符预测类
-        self.AnglePredicted_class = AnglePredicted()
         #记录opencv版本的标志位
         if int(cv2.__version__[0]) == 4:
             self.version = 1
@@ -50,9 +47,8 @@ class GetEnergyMac:
         #该函数用于读取打符参数并进行适当处理
         with open('./json/Energy_parameter.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
-            self.predictAngle = load_dict["tradition"]["predictAngle_small"] 
-            self.pass_number_max = load_dict["tradition"]["pass_number_max"] 
-            self.nms_distence_max = load_dict["tradition"]["nms_distence_max"] 
+            self.pass_number_max = load_dict["deep"]["pass_number_max"] 
+            self.nms_distence_max = load_dict["deep"]["nms_distence_max"] 
             self.center_dis_y = load_dict["deep"]["center_dis_y"] 
             self.center_dis_x = load_dict["deep"]["center_dis_x"] 
             self.model_path = load_dict["deep"]["model_path"]
@@ -76,7 +72,6 @@ class GetEnergyMac:
         with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.Energy_R_debug = load_dict["Debug"]["Energy_R_debug"]
-            self.predict_debug = load_dict["Debug"]["predict_debug"]
         with open('./json/common.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.frame_size = load_dict["Energy_mac"]["width"]
@@ -98,10 +93,9 @@ class GetEnergyMac:
         self.anchors = np.array([[[[[[23,29]]],  [[[43,55]]],  [[[73,105]]]]],[[[[[146,217]]],  [[[231,300]]],  [[[335,433]]]]],[[[[[4,5]]],  [[[8,10]]],  [[[13,16]]]]]])
         self.p_mat,self.p_gd = self.mat_process(res)
 
-    def reinit(self,color,mode):
+    def reinit(self,color):
         #根据更新的颜色信息更换变量
         self.color = color
-        self.mode = mode
         self.__read_energy()
     
     def mat_process(self,res):        
@@ -317,7 +311,7 @@ class GetEnergyMac:
 
     def GetHitPointDL(self, frame, f_time):
         #保护图像变量用来画
-        x, y, z = -1, -1, -1
+        x, y = -1, -1
         #预处理部分
         if self.video_debug_set == 0:
             frame = cv2.cvtColor(frame, cv2.COLOR_BayerRG2RGB)
@@ -345,21 +339,15 @@ class GetEnergyMac:
         #筛选中心
         center = self.center_filter(center,center_tradition)
         if center[0] == -1 or center[1] == -1:
-            x,y,z = -1,-1,-1
+            x,y = -1,-1
         else:
-            z = 0
             #对找到的R进行补偿使其接近实际旋转中心    
             center[0] = center[0] + self.center_dis_x
             center[1] = center[1] + self.center_dis_y
             #筛选待击打装甲板
             hit_pos = self.energy_filter(center,result)
-            x = float(hit_pos[0][0])
-            y = float(hit_pos[0][1])
-            #预测
-            if self.predict_debug:
-                x,y = self.AnglePredicted_class.NormalHit(center, x, y, f_time, self.mode)
-                x = x/self.model_img_size*self.frame_size
-                y = y/self.model_img_size*self.frame_size
+            x = float(hit_pos[0][0])/self.model_img_size*self.frame_size
+            y = float(hit_pos[0][1])/self.model_img_size*self.frame_size
 
 
         #画出图像,
@@ -387,7 +375,7 @@ class GetEnergyMac:
                 self.update_json()
                 self.t0 = time.time()
 
-        return x,y,z
+        return x,y,center
 
 
     def HSV_Process(self,frame):

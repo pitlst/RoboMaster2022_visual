@@ -85,10 +85,10 @@ class MyVideoWriter:
     def write(self,frame,time):
         if self.mode:
             self.video_writer_energy.write(frame)
-            self.file_energy.write(str(time))
+            self.file_energy.write(str(time)+'\n')
         else:
             self.video_writer_aimbot.write(frame)
-            self.file_aimbot.write(str(time))
+            self.file_aimbot.write(str(time)+'\n')
     
     def set_mode(self,mode):
         if mode in [1,2,4,5]:
