@@ -139,7 +139,6 @@ class AnglePredicted:
             del self.history_angle_diff_list[0]
         return pre_angle
     
-
     @count
     def judge_rotate_direct(self,x,y):
         #判断符的旋转方向
@@ -176,8 +175,6 @@ class AnglePredicted:
     def EuclideanDistance(self,c,c0):
         #计算欧氏距离
         return pow((c[0]-c0[0])**2+(c[1]-c0[1])**2, 0.5)
-
-
 
 
 #卡尔曼滤波

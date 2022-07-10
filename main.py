@@ -40,14 +40,17 @@ import signal
 import ctypes
 from Communication import MySerial
 from Aimbot import GetArmor
+from logger import log, video_writer
 from EnergyMac import GetEnergyMac
 from Eenergy_predicted import AnglePredicted
-from logger import log, video_writer
 #根据平台调用不同的图像获取类，注意，win平台无法调取海康相机
 if sys.platform.startswith('win'):
+    log.print_info('run computer is wim and can not open HIVISION')
     from GetFrame_windows import GetFrame
 else:
+    log.print_info('run computer is linux')
     from GetFrame import GetFrame
+
 
 #该变量为退出线程的标志位
 break_label = False

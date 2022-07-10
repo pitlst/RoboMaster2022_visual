@@ -5,5 +5,5 @@ cd /home/cheakf/RoboMaster2022_visual_program
 #循环挂起程序，保证存活
 while true
 do
-    python3 main_energy.py 
+    python3 main.py 
 done
