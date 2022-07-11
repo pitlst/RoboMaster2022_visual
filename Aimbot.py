@@ -19,7 +19,15 @@ class GetArmor:
         else:
             self.version = 0 
         self.read_aimbot()
+        #初始化debug参数
         if self.debug:
+            self.getvar_label = False
+            self.frame_debug = np.array([0]).astype(np.float32)
+            self.mask = np.array([0]).astype(np.float32)
+            self.lightBarList = []
+            self.realCenter_list = []
+            self.x = -1
+            self.y = -1
             self.t0 = time.time()
     
     def reinit(self,color,mode):
@@ -85,27 +93,20 @@ class GetArmor:
             load_dict = json.load(load_f,strict=False)
             self.xCenter = load_dict["Aimbot"]["width"]/2
             self.yCenter = load_dict["Aimbot"]["height"]/2
-        with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
-            load_dict = json.load(load_f,strict=False)
-            self.kalmanfilter_enable = load_dict["Debug"]["kalmanfilter_enable"]
 
     def GetArmor(self,frame):
         #识别装甲板主程序
         x, y, z = -1, -1, -1
-        #根据debug参数拷贝原图像,更改图像来源格式
+        #根据debug参数更改图像来源格式
         if self.video_debug_set == 0:
             frame = cv2.cvtColor(frame, cv2.COLOR_BAYER_RG2RGB)
-        if self.debug:
-            self.frame_debug = frame.copy()
-        
         mask = self.HSV_Process(frame)# 进行HSV图像处理
         lightBarList = self.GetLightBar(mask)# 进行获取灯条矩形列表
         x,y,z = self.CombineLightBar(lightBarList)#非卡尔曼滤波，将灯条拼凑成装甲板
         #根据debug参数确定显示图像
         if self.debug:
             self.mask = mask
-            cv2.imshow('frame_debug',self.frame_debug)
-            cv2.imshow('mask',mask)
+            self.frame_debug = frame.copy()
             self.updata_argument()
             #每秒更新1次json文件中的参数
             if time.time()-self.t0 > 1:
@@ -142,25 +143,26 @@ class GetArmor:
                 rectArea = size[0]*size[1]
                 angleHori = abs(int(angle)%180)
                 if  angleHori > self.minAngleError and angleHori < self.maxAngleError:
-                    #log.print_debug("angleHori = "+str(angleHori))
+                    ## log.print_debug("angleHori = "+str(angleHori))
                     continue
                 if rectProp < self.minlighterProp or rectProp > self.maxlighterProp:#得介于最小值最大值之间才要
-                    #log.print_debug("rectProp = "+str(rectProp))
+                    ## log.print_debug("rectProp = "+str(rectProp))
                     continue
                 if rectArea > self.maxlighterarea or rectArea < self.minlighterarea:
-                    #log.print_debug("rectArea = "+str(rectArea))
+                    ## log.print_debug("rectArea = "+str(rectArea))
                     continue
                 if self.debug:
                         lightBarList.append([center[0],center[1],size[0],size[1],angle,rectProp,angleHori,rectArea])#size[0]是灯条宽 size[1]是灯条长
                 else:
                         lightBarList.append([center[0],center[1],size[0],size[1],angle]) 
-                #log.print_debug("size[0]="+str(size[0]),"size[1]="+str(size[1]))
+                ## log.print_debug("size[0]="+str(size[0]),"size[1]="+str(size[1]))
             else :
-                log.print_debug("<5")
+                # log.print_debug("<5")
+                pass
 
         if self.debug:
-            for i in range(len(lightBarList)):
-                cv2.ellipse(self.frame_debug,(int(lightBarList[i][0]),int(lightBarList[i][1])),(int(lightBarList[i][2]/2),int(lightBarList[i][3]/2)),lightBarList[i][4],0,360,(0,255,0),2,8)
+            #如果开启了debug模式，向类变量更新值
+            self.lightBarList = lightBarList
         return lightBarList
 
 
@@ -171,7 +173,7 @@ class GetArmor:
         x,y,z = -1,-1,-1
         #灯条数量没有两个，构建不出装甲板
         if len(lightBarList) <  2:
-            log.print_debug("NO Armor")
+            # log.print_debug("NO Armor")
             return x, y, z
         for i in range(0,len(lightBarList)-1):
             for j in range(i+1,len(lightBarList)):
@@ -202,47 +204,47 @@ class GetArmor:
                     angle = -angle*180/math.pi
                 #灯条长长过大过小不要
                 if arealongRatio < self.minarealongRatio or arealongRatio > self.maxarealongRatio:
-                    log.print_debug("arealongRatio = "+str(arealongRatio)+str(self.minarealongRatio)+str(self.maxarealongRatio))
+                    # log.print_debug("arealongRatio = "+str(arealongRatio)+str(self.minarealongRatio)+str(self.maxarealongRatio))
                     continue
                 #灯条宽宽比过大过小不要
                 if areawidthRatio < 0.35 or areawidthRatio > (2.86):
-                    log.print_debug("areawidthRatio = "+str(areawidthRatio))
+                    # log.print_debug("areawidthRatio = "+str(areawidthRatio))
                     continue
                 #灯条角度差过大不要
                 if angleDiff > self.angleDiff and angleDiff < 180-self.angleDiff:
-                    log.print_debug("angleDiff = "+str(angleDiff))
+                    # log.print_debug("angleDiff = "+str(angleDiff))
                     continue      
                 #灯条yixiang角度差过大不要
                 if angleDiff > 90 and angleDiff < 180 - yixaingangleDiff:
-                    log.print_debug("yixaingangleDiff = "+str(angleDiff))
+                    # log.print_debug("yixaingangleDiff = "+str(angleDiff))
                     continue
                 #灯条面积比太大不要
                 if areaRatio > 3.3 or areaRatio < (0.3):
-                    log.print_debug("areaRatio = "+str(areaRatio))
+                    # log.print_debug("areaRatio = "+str(areaRatio))
                     continue
                 #灯条中心太近不要
                 if abs(x0-x1) < 15:
-                    log.print_debug( "abs(x0-x1) < 15")
+                    # log.print_debug( "abs(x0-x1) < 15")
                     continue
                 #灯条面积差太大不要
                 if areaDiff > self.lightBarAreaDiff:
-                    log.print_debug("areaDiff = "+str(areaDiff))
+                    # log.print_debug("areaDiff = "+str(areaDiff))
                     continue
                 #装甲板角度过偏不要
                 if abs(angle) > self.armorAngleMin:
-                    log.print_debug(" abs(angle) > = "+str(abs(angle)))
+                    # log.print_debug(" abs(angle) > = "+str(abs(angle)))
                     continue
                 #装甲板高度太小不要
                 if ylength < 10:
-                    log.print_debug(" ylength < 10")
+                    # log.print_debug(" ylength < 10")
                     continue
                 #装甲板面积太大或太小不要
                 if armorArea < self.minarmorArea or armorArea > self.maxarmorArea:
-                    log.print_debug("armorArea < self.minarmorArea"+str(armorArea))
+                    # log.print_debug("armorArea < self.minarmorArea"+str(armorArea))
                     continue
 				#两个灯条y轴高度差过大不要
                 if(abs(y0-y1)>ylength*1.2):
-                    log.print_debug("两个灯条y轴高度差过大不要"+str(abs(y0-y1)/ylength))
+                    # log.print_debug("两个灯条y轴高度差过大不要"+str(abs(y0-y1)/ylength))
                     continue
 				# #装甲板长宽比太大或太小不要
                 # if armorProp >= self.minarmorProp and armorProp <= self.maxarmorProp:
@@ -266,16 +268,16 @@ class GetArmor:
                         y = realCenter[1]
                         z = realCenter[5]
             else :
-                log.print_info("no build Armor")
+                # log.print_debug("no build Armor")
+                pass
             if temp_distence == -1:
                 x,y,z = -1,-1,-1
 
         if self.debug:
-            if len(realCenter_list) > 0:
-                for i in range(len(realCenter_list)):
-                    cv2.ellipse(self.frame_debug,(int(realCenter_list[i][0]),int(realCenter_list[i][1])),(int(realCenter_list[i][2]/2),int(realCenter_list[i][3]/2)),realCenter_list[i][4],0,360,(255,0,255),3,2)
-                    cv2.circle(self.frame_debug,(int(realCenter_list[i][0]),int(realCenter_list[i][1])),5,(0,255,0),-1)  
-                    cv2.circle(self.frame_debug,(int(x),int(y)),10,(255,255,255),-1)    
+            #如果开启了debug模式，向类变量更新值
+            self.realCenter_list = realCenter_list
+            self.x = x
+            self.y = y
         return x, y, z
 
 
@@ -289,6 +291,8 @@ class GetArmor:
     def TrackerBar_create(self):
         #创建滑动条
         if self.debug:
+            if self.getvar_label == False:
+                self.getvar_label = True
             # Lower range colour sliders.
             cv2.createTrackbar('lowHue', 'colorTest', self.lowHue, 255, self.nothing)
             cv2.createTrackbar('lowSat', 'colorTest', self.lowSat, 255, self.nothing)
@@ -320,7 +324,7 @@ class GetArmor:
 
     def updata_argument(self):
         #根据debug更新参数
-        if self.debug:
+        if self.debug and self.getvar_label:
             lowHue = cv2.getTrackbarPos('lowHue', 'colorTest')
             lowSat = cv2.getTrackbarPos('lowSat', 'colorTest')
             lowVal = cv2.getTrackbarPos('lowVal', 'colorTest')
@@ -416,5 +420,15 @@ class GetArmor:
         pass
 
     def get_debug_frame(self):
-        #返回显示所需要的debug图像
+        #处理并返回显示所需要的debug图像
+        lightBarList = self.lightBarList
+        realCenter_list = self.realCenter_list
+        x,y = self.x, self.y
+        for i in range(len(lightBarList)):
+            log.print_debug(lightBarList[i])
+            cv2.ellipse(self.frame_debug,(int(lightBarList[i][0]),int(lightBarList[i][1])),(int(lightBarList[i][2]/2),int(lightBarList[i][3]/2)),lightBarList[i][4],0,360,(0,255,0),2,8)
+        for i in range(len(realCenter_list)):
+            cv2.ellipse(self.frame_debug,(int(realCenter_list[i][0]),int(realCenter_list[i][1])),(int(realCenter_list[i][2]/2),int(realCenter_list[i][3]/2)),realCenter_list[i][4],0,360,(255,0,255),3,2)
+            cv2.circle(self.frame_debug,(int(realCenter_list[i][0]),int(realCenter_list[i][1])),5,(0,255,0),-1)  
+            cv2.circle(self.frame_debug,(int(x),int(y)),10,(255,255,255),-1)    
         return self.frame_debug,self.mask

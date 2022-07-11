@@ -177,9 +177,9 @@ class Main:
         while label:
             frame_set1 = self.GetArmor_class.get_debug_frame()
             frame_set2 = self.GetEnergyMac_class.get_debug_frame()
-            for frame,i in enumerate(frame_set1):
+            for i,frame in enumerate(frame_set1):
                 cv2.imshow('aimbot_'+str(i),frame)
-            for frame,i in enumerate(frame_set2):
+            for i,frame in enumerate(frame_set2):
                 cv2.imshow('energy_'+str(i),frame)
             k = cv2.waitKey(timeout)
             if k == 27:
@@ -222,7 +222,9 @@ class Main:
 
 #定义线程退出回调函数
 def quit(signum, frame):
+    global break_label
     log.print_info('get return sigh')
+    break_label = True
     stop_thread(post_process_thread)
     stop_thread(grab_image_thread)
     stop_thread(debug_show_thread)
@@ -274,7 +276,7 @@ if __name__ == '__main__':
     #设置各个线程为后台线程，保证一次性杀死
     post_process_thread.daemon = True
     grab_image_thread.daemon = True
-    debug_show_thread.daemon = True
+    #debug_show_thread.daemon = True
     #启动线程
     post_process_thread.start()
     grab_image_thread.start()

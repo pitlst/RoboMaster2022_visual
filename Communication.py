@@ -115,7 +115,7 @@ class MySerial:
                     elif data[1] > 0 and data[1] < 10:
                         my_color = 0
                     else:
-                        log.print_error('error: unknow color num')
+                        log.print_error('unknow color num')
                         my_color = -1
                     #判断模式为打符还是自瞄，自瞄为0，打小符为1，打大符为2，打哨兵为3
                     if data[2] > 0 or data[2] < 10:

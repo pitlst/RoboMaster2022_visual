@@ -46,9 +46,9 @@
         "minarmorArea": 515,
         "maxarmorArea": 100000,
         "minarmorProp": 1.12,
-        "maxarmorProp": 2.8,
-        "minBigarmorProp": 2.54,
-        "maxBigarmorProp": 5.85,
-        "kh": 30321.0
+        "maxarmorProp": 0.0,
+        "minBigarmorProp": 0.0,
+        "maxBigarmorProp": 0.0,
+        "kh": 0.0
     }
 }

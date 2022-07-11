@@ -40,8 +40,22 @@ class GetEnergyMac:
             self.version = 1
         else:
             self.version = 0 
+        #初始化debug参数
         if self.debug:
             self.t0 = time.time()
+            self.img = np.array([0]).astype(np.float32)
+            self.img2 = np.array([0]).astype(np.float32)
+            self.img3 = np.array([0]).astype(np.float32)
+            self.img4 = np.array([0]).astype(np.float32)
+            self.colors = [[255,255,0],[0,255,0],[0,255,255]]
+            self.getvar_label = False
+            self.pred = [[]]
+            self.center = []
+            self.result = []
+            self.hit_pos = []
+            self.x = -1
+            self.y = -1
+            self.center_tradition = []
 
     def __read_energy(self):
         #该函数用于读取打符参数并进行适当处理
@@ -325,7 +339,7 @@ class GetEnergyMac:
             mask = self.HSV_Process(frame_reasize)
             center_tradition = self.FindRsignScope(mask)
         else:
-            center_tradition = [-1,-1,-1,-1]
+            center_tradition = [[-1,-1,-1,-1]]
         #深度学习部分
         frame_deal = frame_reasize.astype('float32')
         frame_deal = frame_deal/255  #像素归一化
@@ -340,6 +354,7 @@ class GetEnergyMac:
         center = self.center_filter(center,center_tradition)
         if center[0] == -1 or center[1] == -1:
             x,y = -1,-1
+            hit_pos = [[-1,-1]]
         else:
             #对找到的R进行补偿使其接近实际旋转中心    
             center[0] = center[0] + self.center_dis_x
@@ -350,25 +365,20 @@ class GetEnergyMac:
             y = float(hit_pos[0][1])/self.model_img_size*self.frame_size
 
 
-        #画出图像,
         if self.debug:
+            #如果开启了debug模式，向类变量更新值
             self.img4 = frame.copy()
             self.img = frame_reasize.copy()
             self.img2 = frame_reasize.copy()
             self.img3 = frame_reasize.copy()
-            result = np.array(result)
-            self.img = self.draw_pred(self.img,pred[0],center)
-            self.img = self.draw_center(self.img,center)
-            self.img2 = self.draw_pred(self.img2,result,center)
-            self.img2 = self.draw_center(self.img2,center)
-            cv2.circle(self.img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_max),self.colors[2],1)
-            cv2.circle(self.img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_min),self.colors[2],1)
-            cv2.circle(self.img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.nms_distence_max),self.colors[0],1)
-            cv2.circle(self.img2,(int(center[0]),int(center[1])),int(self.armor_R_distance_max),self.colors[2],1)
-            cv2.circle(self.img2,(int(center[0]),int(center[1])),int(self.armor_R_distance_min),self.colors[2],1)
-            cv2.circle(self.img4,(int(x),int(y)),4,(255,255,255),-1)
-            for c_t in center_tradition:
-                cv2.circle(self.img3,(int(c_t[0]),int(c_t[1])),8,(255,255,255),-1)
+            self.result = np.array(result)
+            self.pred = pred[0]
+            self.center = center
+            self.hit_pos = hit_pos
+            self.center_tradition = center_tradition
+            self.x = x
+            self.y = y
+            #更新滑动条参数
             self.updata_argument()
             #每隔1秒更新一次json文件
             if time.time()-self.t0 > 1:
@@ -383,8 +393,6 @@ class GetEnergyMac:
         frame = cv2.GaussianBlur(frame,(5,5),0)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
         mask = cv2.inRange(frame, self.hsv_low, self.hsv_high)
-        if self.debug:
-            cv2.imshow('mask',mask)
         return mask
 
 
@@ -424,7 +432,7 @@ class GetEnergyMac:
         #画出来的，按自己喜好来就可以了，深度学习检测基本不用实时调参，不咋重要
         #这个画扇叶和装甲板
         colors = [[255,255,0],[0,255,0],[0,255,255]]
-        if pred.all() != None or len(center):
+        if None not in pred and len(center):
             for det in pred:
                 x = det[0]
                 y = det[1]
@@ -480,8 +488,6 @@ class GetEnergyMac:
 
                 cv2.drawContours(img,[box],0,colors[label],1)
                 cv2.circle(img,(int(x),int(y)),4,colors[label],-1)
-        else:
-            log.print_error('No box is available')
         return img
 
     @staticmethod
@@ -509,8 +515,6 @@ class GetEnergyMac:
             box = np.array(box,dtype = 'int32')          
             cv2.drawContours(img,[box],0,(0,255,0),1)
             cv2.circle(img,(int(center[0]),int(center[1])),4,(0,255,0),-1)
-        else:
-            log.print_error('No box is available')
         return img
 
 
@@ -535,6 +539,8 @@ class GetEnergyMac:
     def TrackerBar_create(self):
         #创建滑动条,并备份参数
         if self.debug:
+            if self.getvar_label == False:
+                self.getvar_label = True
             # Lower range colour sliders.
             cv2.createTrackbar('lowHue', 'energyTest', self.hsv_low[0], 255, self.nothing)
             cv2.createTrackbar('lowSat', 'energyTest', self.hsv_low[1], 255, self.nothing)
@@ -555,7 +561,7 @@ class GetEnergyMac:
 
     def updata_argument(self):
         #根据debug更新参数
-        if self.debug:
+        if self.debug and self.getvar_label:
             lowHue = cv2.getTrackbarPos('lowHue', 'energyTest')
             lowSat = cv2.getTrackbarPos('lowSat', 'energyTest')
             lowVal = cv2.getTrackbarPos('lowVal', 'energyTest')
@@ -604,5 +610,26 @@ class GetEnergyMac:
         pass
 
     def get_debug_frame(self):
-        #返回显示所需要的debug图像
+        #处理并返回显示所需要的debug图像
+        pred = self.pred
+        center = self.center
+        result = self.result
+        hit_pos = self.hit_pos
+        center_tradition = self.center_tradition
+        x,y = self.x, self.y
+        self.img = self.draw_pred(self.img,pred,center)
+        self.img = self.draw_center(self.img,center)
+        self.img2 = self.draw_pred(self.img2,result,center)
+        self.img2 = self.draw_center(self.img2,center)
+        if len(hit_pos):
+            cv2.circle(self.img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_max),self.colors[2],1)
+            cv2.circle(self.img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_min),self.colors[2],1)
+            cv2.circle(self.img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.nms_distence_max),self.colors[0],1)
+        if len(center):
+            cv2.circle(self.img2,(int(center[0]),int(center[1])),int(self.armor_R_distance_max),self.colors[2],1)
+            cv2.circle(self.img2,(int(center[0]),int(center[1])),int(self.armor_R_distance_min),self.colors[2],1)
+        if self.x != -1 and self.y != -1:
+            cv2.circle(self.img4,(int(x),int(y)),4,(255,255,255),-1)
+        for c_t in center_tradition:
+            cv2.circle(self.img3,(int(c_t[0]),int(c_t[1])),8,(255,255,255),-1)
         return self.img, self.img2, self.img3, self.img4

@@ -36,6 +36,7 @@ class AnglePredicted:
         self.history_angle_list = []
         #大符历史记录初始化
         self.history_angle_diff_list = []
+        self.begin_time = None
     
     def reinit(self,mode):
         #打符预测类重初始化
