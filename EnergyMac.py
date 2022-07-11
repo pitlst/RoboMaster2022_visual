@@ -378,8 +378,6 @@ class GetEnergyMac:
             self.center_tradition = center_tradition
             self.x = x
             self.y = y
-            #更新滑动条参数
-            self.updata_argument()
             #每隔1秒更新一次json文件
             if time.time()-self.t0 > 1:
                 self.update_json()

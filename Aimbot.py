@@ -107,7 +107,6 @@ class GetArmor:
         if self.debug:
             self.mask = mask
             self.frame_debug = frame.copy()
-            self.updata_argument()
             #每秒更新1次json文件中的参数
             if time.time()-self.t0 > 1:
                 self.update_json()

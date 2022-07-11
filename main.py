@@ -175,6 +175,10 @@ class Main:
             self.GetArmor_class.TrackerBar_create()
             self.GetEnergyMac_class.TrackerBar_create()
         while label:
+            #更新滑动条参数
+            self.GetArmor_class.updata_argument()
+            self.GetEnergyMac_class.updata_argument()
+            #获取显示的图像
             frame_set1 = self.GetArmor_class.get_debug_frame()
             frame_set2 = self.GetEnergyMac_class.get_debug_frame()
             for i,frame in enumerate(frame_set1):
