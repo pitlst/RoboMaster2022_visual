@@ -513,8 +513,13 @@ class GetFrame:
 
     def GetOneFrame(self):
         #获取单帧图像，根据debug参数来确定图像获取来源
-        if self.video_debug_set:
+        if self.video_debug_set == 1:
             _ , frame = self.cap.read()
+            return frame
+        elif self.video_debug_set == 2:
+            file = self.file_list[self.count]
+            frame = cv2.imread(self.video_debug_path+'/'+file)
+            self.count += 1
             return frame
         else:
             pData = self.pData
@@ -531,8 +536,10 @@ class GetFrame:
             return temp
 
     def EndCamera(self):
-        if self.video_debug_set:
+        if self.video_debug_set == 1:
             self.cap.release()
+        elif self.video_debug_set == 2:
+            self.count = None
         else:
             # ch:停止取流 | en:Stop grab image
             ret = self.cam.MV_CC_StopGrabbing()
