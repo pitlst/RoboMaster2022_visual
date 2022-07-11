@@ -276,7 +276,7 @@ if __name__ == '__main__':
     #设置各个线程为后台线程，保证一次性杀死
     post_process_thread.daemon = True
     grab_image_thread.daemon = True
-    #debug_show_thread.daemon = True
+    debug_show_thread.daemon = True
     #启动线程
     post_process_thread.start()
     grab_image_thread.start()

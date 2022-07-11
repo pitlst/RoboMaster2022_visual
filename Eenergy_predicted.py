@@ -3,7 +3,7 @@ import math
 import json
 from logger import log
 
-#定义一个装饰器，用于保证函数不再多次调用
+#定义一个装饰器，用于保证函数调用次数
 def count(func):
     num = 0  # 初始化次数
     result = 0 #初始化结果
@@ -11,8 +11,8 @@ def count(func):
         nonlocal num # 声明num 变当前作用域局部变量为最临近外层（非全局）作用域变量。
         nonlocal result
         num += 1 # 每次调用次数加1
-        if num < 1000:
-            #只有在最开始的1000次调用，函数才会真正执行并更改结果
+        if num < 500:
+            #只有在最开始的500次调用，函数才会真正执行并更改结果
             result = func(*args, **kwargs)#原函数
         return result
 
