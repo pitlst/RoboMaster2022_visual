@@ -198,7 +198,6 @@ class Main:
         with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.timeout = load_dict["Debug"]["timeout"]
-            self.kalmanfilter_enable = load_dict["Debug"]["kalmanfilter_enable"]
             self.video_writer_debug = load_dict["Debug"]["video_writer"]
             self.video_interval_fps = load_dict["Debug"]["video_interval_fps"]
         #判断数据来源
