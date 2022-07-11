@@ -126,7 +126,6 @@ class Main:
                 new = list(self.MySerial_class.get_msg())
                 #模式与颜色原先不同时进行重置,并通过全局变量通知其他线程
                 if -1 not in new and new != old:
-                    cv2.destroyAllWindows()
                     #如果切换颜色
                     if new[0] != old[0]:
                         self.GetArmor_class.reinit(new[0],new[1])
