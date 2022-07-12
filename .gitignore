@@ -3,4 +3,5 @@ __pycache__/*
 model/*.onnx
 model/*.mapping
 log/*
+!log/log
 .gitignore.swp
