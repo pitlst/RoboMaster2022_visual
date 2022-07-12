@@ -423,11 +423,13 @@ class GetArmor:
         lightBarList = self.lightBarList
         realCenter_list = self.realCenter_list
         x,y = self.x, self.y
+        frame_debug = self.frame_debug
+        mask = self.mask
         for i in range(len(lightBarList)):
             log.print_debug(lightBarList[i])
-            cv2.ellipse(self.frame_debug,(int(lightBarList[i][0]),int(lightBarList[i][1])),(int(lightBarList[i][2]/2),int(lightBarList[i][3]/2)),lightBarList[i][4],0,360,(0,255,0),2,8)
+            cv2.ellipse(frame_debug,(int(lightBarList[i][0]),int(lightBarList[i][1])),(int(lightBarList[i][2]/2),int(lightBarList[i][3]/2)),lightBarList[i][4],0,360,(0,255,0),2,8)
         for i in range(len(realCenter_list)):
-            cv2.ellipse(self.frame_debug,(int(realCenter_list[i][0]),int(realCenter_list[i][1])),(int(realCenter_list[i][2]/2),int(realCenter_list[i][3]/2)),realCenter_list[i][4],0,360,(255,0,255),3,2)
-            cv2.circle(self.frame_debug,(int(realCenter_list[i][0]),int(realCenter_list[i][1])),5,(0,255,0),-1)  
-            cv2.circle(self.frame_debug,(int(x),int(y)),10,(255,255,255),-1)    
-        return self.frame_debug,self.mask
+            cv2.ellipse(frame_debug,(int(realCenter_list[i][0]),int(realCenter_list[i][1])),(int(realCenter_list[i][2]/2),int(realCenter_list[i][3]/2)),realCenter_list[i][4],0,360,(255,0,255),3,2)
+            cv2.circle(frame_debug,(int(realCenter_list[i][0]),int(realCenter_list[i][1])),5,(0,255,0),-1)  
+            cv2.circle(frame_debug,(int(x),int(y)),10,(255,255,255),-1)    
+        return frame_debug,mask

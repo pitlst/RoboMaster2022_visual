@@ -615,19 +615,21 @@ class GetEnergyMac:
         hit_pos = self.hit_pos
         center_tradition = self.center_tradition
         x,y = self.x, self.y
-        self.img = self.draw_pred(self.img,pred,center)
-        self.img = self.draw_center(self.img,center)
-        self.img2 = self.draw_pred(self.img2,result,center)
-        self.img2 = self.draw_center(self.img2,center)
+        img = self.draw_pred(self.img,pred,center)
+        img = self.draw_center(img,center)
+        img2 = self.draw_pred(self.img2,result,center)
+        img2 = self.draw_center(img2,center)
+        img3 = self.img3
+        img4 = self.img4
         if len(hit_pos):
-            cv2.circle(self.img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_max),self.colors[2],1)
-            cv2.circle(self.img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_min),self.colors[2],1)
-            cv2.circle(self.img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.nms_distence_max),self.colors[0],1)
+            cv2.circle(img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_max),self.colors[2],1)
+            cv2.circle(img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_min),self.colors[2],1)
+            cv2.circle(img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.nms_distence_max),self.colors[0],1)
         if len(center):
-            cv2.circle(self.img2,(int(center[0]),int(center[1])),int(self.armor_R_distance_max),self.colors[2],1)
-            cv2.circle(self.img2,(int(center[0]),int(center[1])),int(self.armor_R_distance_min),self.colors[2],1)
+            cv2.circle(img2,(int(center[0]),int(center[1])),int(self.armor_R_distance_max),self.colors[2],1)
+            cv2.circle(img2,(int(center[0]),int(center[1])),int(self.armor_R_distance_min),self.colors[2],1)
         if self.x != -1 and self.y != -1:
-            cv2.circle(self.img4,(int(x),int(y)),4,(255,255,255),-1)
+            cv2.circle(img4,(int(x),int(y)),4,(255,255,255),-1)
         for c_t in center_tradition:
-            cv2.circle(self.img3,(int(c_t[0]),int(c_t[1])),8,(255,255,255),-1)
-        return self.img, self.img2, self.img3, self.img4
+            cv2.circle(img3,(int(c_t[0]),int(c_t[1])),8,(255,255,255),-1)
+        return img, img2, img3, img4
