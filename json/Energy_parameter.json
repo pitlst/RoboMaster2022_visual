@@ -20,8 +20,11 @@
     "predicted":
     {
 
-        "predictAngle_small":36,
+        "predict_small":36,
         "小符时预测角度参数":"单位是度",
+
+        "predict_big":30,
+        "大符时预测角度参数":"单位是时间s",
 
         "delta_angle_distance":10,
         "用于判断大幅是或否切换的角度范围":""

@@ -47,7 +47,8 @@ class AnglePredicted:
         #读取配置文件
         with open('./json/Energy_parameter.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
-            self.predictAngle_small = load_dict["predicted"]["predictAngle_small"]
+            self.predict_small = load_dict["predicted"]["predict_small"]
+            self.predict_big = load_dict["predicted"]["predict_big"]
             self.delta_angle_distance = load_dict["predicted"]["delta_angle_distance"]
         with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
@@ -105,7 +106,7 @@ class AnglePredicted:
             elif self.mode in [4,5]:
                 #大幅预测
                 pre_angle = self.energymac_forecast_big(vectorX,vectorY)
-                forecast_angle = angle + abs(pre_angle)*self.detect
+                forecast_angle = angle + abs(pre_angle)*self.predict_big*self.detect
             else:
                 forecast_angle = angle
                 log.print_error('unknow label to hit')
@@ -119,11 +120,11 @@ class AnglePredicted:
 
     def energymac_forecast_small(self,angle):
         #小符预测
-        #该变量为预测小符时候的提前角度，需要比赛前调参更改
-        angle = angle + self.predictAngle_small*self.detect
+        angle = angle + self.predict_small*self.detect
         return angle
 
     def energymac_forecast_big(self,x,y):
+        #大符预测
         if len(self.history_angle_diff_list) == 0:
             self.history_angle_diff_list.append([x,y,self.t0])
         elif len(self.history_angle_diff_list) > 0:

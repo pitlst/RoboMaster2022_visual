@@ -115,6 +115,9 @@ class Main:
                     temp_num = 0
                     frame = cv2.cvtColor(frame, cv2.COLOR_BayerRG2RGB)
                     video_writer.write(frame,fram_time)
+            #根据帧率判断线程是否处于正常状态，不正常引发报错退出
+            if fps > 1000:
+                raise ValueError("error：图像获取线程帧数异常")
             #每隔一秒输出一次帧率
             if time.time()-t0 > 1:
                 log.print_info('fps:'+str(fps))

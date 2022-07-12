@@ -18,16 +18,16 @@
         "hsv_blue_low": [
             80,
             139,
-            80
+            85
         ]
     },
     "EnergyFind": {
-        "MaxRsS": 0.01,
-        "MinRsS": 0.01,
-        "MaxRsRatio": 0.0,
-        "fan_armor_distence_max": 0.11,
-        "fan_armor_distence_min": 0.045,
+        "MaxRsS": 0.0007915865384615384,
+        "MinRsS": 0.0004721153846153846,
+        "MaxRsRatio": 557.856,
+        "fan_armor_distence_max": 0.108,
+        "fan_armor_distence_min": 0.062000000000000006,
         "armor_R_distance_max": 0.255,
-        "armor_R_distance_min": 0.18
+        "armor_R_distance_min": 0.159
     }
 }

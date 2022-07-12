@@ -231,7 +231,7 @@ class GetEnergyMac:
         #对R进行筛选，根据debug参数选择方案，有待优化
         Center = []
         if self.Energy_R_debug == 0:
-            #纯深度学习，未完成
+            #纯深度学习,按照置信度筛选
             if len(center):
                 for j,temp_j in enumerate(center):
                     if len(Center) == 0:
@@ -242,10 +242,28 @@ class GetEnergyMac:
             else:
                 Center = []
         elif self.Energy_R_debug == 1:
-            #纯传统视觉,未完成
-            Center = center_tradition[0]
+            #纯传统视觉,按照历史R位置筛选，取阈值下最近的
+            if len(center_tradition):
+                if -1 in self.last_center:
+                    Center = center_tradition[0]
+                    self.last_center = Center
+                else:
+                    last_dis = math.inf
+                    for c_t in center_tradition:
+                        dis = (self.last_center[0]-c_t[0])**2+(self.last_center[1]-c_t[1])**2
+                        if dis < self.nms_distence_max**2 and last_dis > dis:
+                            Center = c_t
+                            last_dis = dis
+            if len(Center):
+                self.last_center = Center
+            elif -1 not in self.last_center:
+                Center = self.last_center
+                self.pass_number += 1
+                if self.pass_number > self.pass_number_max:
+                    self.last_center = [-1,-1]
+                    self.pass_number = 0
         elif self.Energy_R_debug == 2:
-            #对传统center与深度学习center取交集
+            #对传统center与深度学习center取交集，丢失后不做延时，此方案应用于模型状态较好只有误识别没有漏识别的情况
             if len(center_tradition):
                 for j, temp_j in enumerate(center):
                     label = 1
@@ -265,27 +283,44 @@ class GetEnergyMac:
             else:
                 Center = []
         elif self.Energy_R_debug == 3:
-            #深度学习丢失后用传统视觉弥补，未完成
-            if center_tradition[0] != -1 or center_tradition[1] != -1:
-                if center[0] == -1 or center[1] == -1 or (center[0]-self.last_center[0])**2+(center[1]-self.last_center[1])**2>300:
-                    center = center_tradition
-            if center[0] != -1 or center[1] != -1:
-                self.last_center = center
-                if self.pass_number != 0:
-                    self.pass_number = 0
-            elif self.last_center[0] != -1 or self.last_center[1] != -1:
-                center = self.last_center
+            #深度学习丢失后用传统视觉弥补，此情况应用于模型状态不好，有大概率漏识别的情况
+            #首先将深度学习的center按置信度取最高
+            deel_center = []
+            if len(center):
+                for j,temp_j in enumerate(center):
+                    if len(deel_center) == 0:
+                        deel_center = temp_j
+                    else:
+                        if deel_center[4] < temp_j[4]:
+                            deel_center = temp_j
+                #根据历史位置判断深度学习的是不是误识别
+                if (deel_center[0]-self.last_center[0])**2+(deel_center[1]-self.last_center[1])**2<300:
+                    self.last_center = deel_center
+                    Center = deel_center
+            #如果没有深度学习输出或者深度学习输出不对而且传统视觉有输出
+            if len(Center) == 0 and len(center_tradition):
+                if -1 in self.last_center:
+                    Center = center_tradition[0]
+                    self.last_center = Center
+                else:
+                    last_dis = math.inf
+                    #按照历史R位置筛选，取阈值下最近的
+                    for c_t in center_tradition:
+                        dis = (self.last_center[0]-c_t[0])**2+(self.last_center[1]-c_t[1])**2
+                        if dis < self.nms_distence_max**2 and last_dis > dis:
+                            Center = c_t
+                            last_dis = dis
+                    if len(Center):
+                        self.last_center = Center
+            #如果二者都么有输出，看看历史有没有拿来用
+            if len(Center) == 0 and -1 not in self.last_center:
+                Center = self.last_center
                 self.pass_number += 1
                 if self.pass_number > self.pass_number_max:
                     self.last_center = [-1,-1]
-            else:
-                Center = []
-        else:
-            Center = []
-
-        if len(Center):
-            Center = Center[0:4]
-        else:
+                    self.pass_number = 0
+        #如果都没有，累了，毁灭吧
+        if len(Center) == 0:
             Center = [-1,-1,-1,-1]
 
         return Center
@@ -335,7 +370,7 @@ class GetEnergyMac:
             frame_reasize = frame
         # 传统视觉部分,根据debug参数启用
         # 传统视觉识别R是为了弥补家里的大符的无奈之举，比赛时一般不会出现如此极端的情况
-        if self.Energy_R_debug:
+        if self.Energy_R_debug in [1,2,3]:
             mask = self.HSV_Process(frame_reasize)
             center_tradition = self.FindRsignScope(mask)
         else:
@@ -368,6 +403,7 @@ class GetEnergyMac:
         if self.debug:
             #如果开启了debug模式，向类变量更新值
             self.img4 = frame.copy()
+            self.img5 = mask.copy()
             self.img = frame_reasize.copy()
             self.img2 = frame_reasize.copy()
             self.img3 = frame_reasize.copy()
@@ -388,7 +424,7 @@ class GetEnergyMac:
 
     def HSV_Process(self,frame):
         #图像二值化
-        frame = cv2.GaussianBlur(frame,(5,5),0)
+        frame = cv2.GaussianBlur(frame,(7,7),0)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
         mask = cv2.inRange(frame, self.hsv_low, self.hsv_high)
         return mask
@@ -422,7 +458,7 @@ class GetEnergyMac:
                 contoursFine = False
             if contoursFine:
                 Center_return.append([center[0],center[1],longSide,shortSide])
-                break
+
         return Center_return
 
     @staticmethod
@@ -548,9 +584,9 @@ class GetEnergyMac:
             cv2.createTrackbar('highSat', 'energyTest', self.hsv_high[1], 255, self.nothing)
             cv2.createTrackbar('highVal', 'energyTest', self.hsv_high[2], 255, self.nothing)
 
-            cv2.createTrackbar('MaxRsS0.0000', 'energyTest', int(self.MaxRsS/self.model_img_size*10000), 100, self.nothing)
-            cv2.createTrackbar('MinRsS0.0000', 'energyTest', int(self.MinRsS/self.model_img_size*10000), 100, self.nothing)
-            cv2.createTrackbar('MaxRsRatio0.000', 'energyTest', int(self.MaxRsRatio/self.model_img_size/self.model_img_size*1000), 100, self.nothing)
+            cv2.createTrackbar('MaxRsS0.0000', 'energyTest', int(self.MaxRsS/self.model_img_size*10000), 10000, self.nothing)
+            cv2.createTrackbar('MinRsS0.0000', 'energyTest', int(self.MinRsS/self.model_img_size*10000), 10000, self.nothing)
+            cv2.createTrackbar('MaxRsRatio0.000', 'energyTest', int(self.MaxRsRatio/self.model_img_size*1000), 2000, self.nothing)
             cv2.createTrackbar('fan_armor_distence_max0.000', 'energyTest', int(self.fan_armor_distence_max/self.model_img_size*1000), 255, self.nothing)
             cv2.createTrackbar('fan_armor_distence_min0.000', 'energyTest', int(self.fan_armor_distence_min/self.model_img_size*1000), 255, self.nothing)
             cv2.createTrackbar('armor_R_distance_max0.000', 'energyTest', int(self.armor_R_distance_max/self.model_img_size*1000), 255, self.nothing)
@@ -587,9 +623,9 @@ class GetEnergyMac:
                 else:
                     load_dict["hsv"]["hsv_blue_high"] = [int(x) for x in list(self.hsv_high)]
                     load_dict["hsv"]["hsv_blue_low"] = [int(x) for x in list(self.hsv_low)]
-                load_dict["EnergyFind"]["MaxRsS"] = self.MaxRsS/self.model_img_size
-                load_dict["EnergyFind"]["MinRsS"] = self.MinRsS/self.model_img_size
-                load_dict["EnergyFind"]["MaxRsRatio"] = self.MaxRsRatio/self.model_img_size
+                load_dict["EnergyFind"]["MaxRsS"] = self.MaxRsS/(self.model_img_size**2)
+                load_dict["EnergyFind"]["MinRsS"] = self.MinRsS/(self.model_img_size**2)
+                load_dict["EnergyFind"]["MaxRsRatio"] = self.MaxRsRatio
                 load_dict["EnergyFind"]["fan_armor_distence_max"] = self.fan_armor_distence_max/self.model_img_size
                 load_dict["EnergyFind"]["fan_armor_distence_min"] = self.fan_armor_distence_min/self.model_img_size
                 load_dict["EnergyFind"]["armor_R_distance_max"] = self.armor_R_distance_max/self.model_img_size
@@ -621,6 +657,7 @@ class GetEnergyMac:
         img2 = self.draw_center(img2,center)
         img3 = self.img3
         img4 = self.img4
+        img5 = self.img5
         if len(hit_pos):
             cv2.circle(img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_max),self.colors[2],1)
             cv2.circle(img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_min),self.colors[2],1)
@@ -632,4 +669,4 @@ class GetEnergyMac:
             cv2.circle(img4,(int(x),int(y)),4,(255,255,255),-1)
         for c_t in center_tradition:
             cv2.circle(img3,(int(c_t[0]),int(c_t[1])),8,(255,255,255),-1)
-        return img, img2, img3, img4
+        return img, img2, img3, img4, img5
