@@ -1,12 +1,16 @@
 import cv2
 import time
 import json
+import os
 import logging
 
 class MyLogging:
     def __init__(self):
         #日志类初始化
         time_tuple = list(time.localtime(time.time()))
+        #创建日志文件夹
+        if os.path.exists('./log/') == False:
+            os.mkdir('./log/') 
         #如果类中已经存在文件名，证明已初始化过，不再二次生成
         if hasattr(self,'value') == False:
             self.log_name = '-'
