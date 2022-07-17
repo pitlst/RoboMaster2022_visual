@@ -11,8 +11,8 @@ def count(func):
         nonlocal num # 声明num 变当前作用域局部变量为最临近外层（非全局）作用域变量。
         nonlocal result
         num += 1 # 每次调用次数加1
-        if num < 500:
-            #只有在最开始的500次调用，函数才会真正执行并更改结果
+        if num < 1000:
+            #只有在最开始的1000次调用，函数才会真正执行并更改结果
             result = func(*args, **kwargs)#原函数
         return result
 
@@ -27,8 +27,10 @@ class AnglePredicted:
         dt = 1.0/60
         F = np.array([[1, dt, 0], [0, 1, dt], [0, 0, 1]])
         self.H = np.array([1, 0, 0]).reshape(1, 3)
-        Q = np.array([[0.05, 0.05, 0.0], [0.05, 0.05, 0.0], [0.0, 0.0, 0.0]])
-        R = np.array([0.1]).reshape(1, 1)
+        # 过程噪声Q
+        Q = np.array([[0.05, 0.05, 0.0], [0.05, 0.05, 0.0], [0.0, 0.0, 0.0]]) * self.Q_noise
+        # 测量噪声R
+        R = np.array([1.0]).reshape(1, 1) * self.R_noise
         self.kf = KalmanFilter(F = F, H = self.H, Q = Q, R = R)
         #旋转方向默认值为1
         self.detect = 1
@@ -41,7 +43,7 @@ class AnglePredicted:
     def reinit(self,mode):
         #打符预测类重初始化
         self.mode = mode
-        self.read_json()
+        #self.read_json()
     
     def read_json(self):
         #读取配置文件
@@ -49,10 +51,12 @@ class AnglePredicted:
             load_dict = json.load(load_f,strict=False)
             self.predict_small = load_dict["predicted"]["predict_small"]
             self.predict_big = load_dict["predicted"]["predict_big"]
-            self.delta_angle_distance = load_dict["predicted"]["delta_angle_distance"]
+            self.R_noise = float(load_dict["predicted"]["R_noise"])
+            self.Q_noise = float(load_dict["predicted"]["Q_noise"])
         with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.detect_debug = load_dict["Debug"]["detect_auto"]
+            self.predict_debug = load_dict["Debug"]["predict_debug"]
 
     def NormalHit(self,msg,f_time):
         #预测前处理，将笛卡尔坐标转换为极坐标，对角度预测
@@ -65,6 +69,7 @@ class AnglePredicted:
             vectorX = -1
             vectorY = -1
             angle = -1
+            hitDis = -1
         else:
             vectorX = x - center[0]
             vectorY = y - center[1]
@@ -97,22 +102,33 @@ class AnglePredicted:
             else:
                 angle = -1
 
-        #计算大符半径
-        hitDis = self.EuclideanDistance([x, y], center)
+            #计算大符半径
+            hitDis = self.EuclideanDistance([x, y], center)
+
         if angle != -1:
-            if self.mode in [1,2]:
-                #小幅预测
-                forecast_angle = self.energymac_forecast_small(angle)
-            elif self.mode in [4,5]:
-                #大幅预测
-                pre_angle = self.energymac_forecast_big(vectorX,vectorY)
-                forecast_angle = angle + abs(pre_angle)*self.predict_big*self.detect
+            if self.predict_debug:
+                if self.mode in [1,2]:
+                    #小幅预测
+                    forecast_angle = self.energymac_forecast_small(angle)
+                elif self.mode in [4,5]:
+                    #大幅预测
+                    pre_angle = self.energymac_forecast_big(vectorX,vectorY)
+                    #分段映射防止突变
+                    if pre_angle < 8:
+                        pre_angle = pre_angle
+                    elif pre_angle > 130:
+                        pre_angle = 130
+                    forecast_angle = angle + abs(pre_angle)*self.predict_big*self.detect
+                else:
+                    forecast_angle = angle
+                    log.print_error('unknow label to hit')
             else:
                 forecast_angle = angle
-                log.print_error('unknow label to hit')
             forecast_angle = forecast_angle/180*math.pi
             hitX = center[0] + hitDis*math.cos(forecast_angle)
             hitY = center[1] + hitDis*math.sin(forecast_angle)
+            self.x = hitX
+            self.y = hitY
             return hitX, hitY, 1
         else:
             return -1,-1,-1
@@ -125,15 +141,18 @@ class AnglePredicted:
 
     def energymac_forecast_big(self,x,y):
         #大符预测
+        pre_angle = 0
         if len(self.history_angle_diff_list) == 0:
             self.history_angle_diff_list.append([x,y,self.t0])
         elif len(self.history_angle_diff_list) > 0:
             angle1 = math.atan2(self.history_angle_diff_list[-1][0], self.history_angle_diff_list[-1][1])
             angle2 = math.atan2(x, y)
             delta_angle = (angle2 - angle1)*180/math.pi
-            if abs(delta_angle) < 5:
-                self.kf.update(delta_angle)
+            delta_time = (self.t0 - self.history_angle_diff_list[-1][2])
+            if abs(delta_angle) < 3:
+                self.kf.update(delta_angle/delta_time)
                 pre_angle = np.dot(self.H, self.kf.predict())[0]
+                self.history_angle_diff_list.append([x,y,self.t0])
             else:
                 self.history_angle_diff_list = []
         #限制记录器大小
@@ -177,7 +196,10 @@ class AnglePredicted:
     def EuclideanDistance(self,c,c0):
         #计算欧氏距离
         return pow((c[0]-c0[0])**2+(c[1]-c0[1])**2, 0.5)
-
+    
+    def get_debug_msg(self):
+        #返回输出坐标
+        return [self.x,self.y]
 
 #卡尔曼滤波
 class KalmanFilter(object):

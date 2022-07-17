@@ -3,6 +3,7 @@ import numpy as np
 import math
 import json
 import time
+import copy
 from logger import log
 
 class GetArmor:
@@ -22,8 +23,8 @@ class GetArmor:
         #初始化debug参数
         if self.debug:
             self.getvar_label = False
-            self.frame_debug = np.array([0]).astype(np.float32)
-            self.mask = np.array([0]).astype(np.float32)
+            self.frame_debug = np.zeros( [ 480, 640 ], dtype = np.uint8 )
+            self.mask = np.zeros( [ 480, 640 ], dtype = np.uint8 )
             self.lightBarList = []
             self.realCenter_list = []
             self.x = -1
@@ -106,7 +107,7 @@ class GetArmor:
         #根据debug参数确定显示图像
         if self.debug:
             self.mask = mask
-            self.frame_debug = frame.copy()
+            self.frame_debug = frame
             #每秒更新1次json文件中的参数
             if time.time()-self.t0 > 1:
                 self.update_json()
@@ -124,15 +125,13 @@ class GetArmor:
     def GetLightBar(self,mask):
         #筛选灯条
         lightBarList = []
+        if self.debug:
+            self.lightBarList = []
         #对于opencv3，轮廓寻找函数有3个返回值，对于opencv4只有两个
         if self.version:
             contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1)
         else:
             _, contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1)
-        #轮廓点数小于40默认误识别
-        if(len(contours)>40):
-            lightBarList = []
-            return lightBarList
         for contour in range(len(contours)):
             if len(contours[contour]) >= 5:
                 center, size, angle = cv2.fitEllipse(contours[contour])#反馈的长宽其实就是长的轴和短的轴，所以一定长宽比大于1
@@ -144,24 +143,22 @@ class GetArmor:
                 if  angleHori > self.minAngleError and angleHori < self.maxAngleError:
                     ## log.print_debug("angleHori = "+str(angleHori))
                     continue
-                if rectProp < self.minlighterProp or rectProp > self.maxlighterProp:#得介于最小值最大值之间才要
+                elif rectProp < self.minlighterProp or rectProp > self.maxlighterProp:#得介于最小值最大值之间才要
                     ## log.print_debug("rectProp = "+str(rectProp))
                     continue
-                if rectArea > self.maxlighterarea or rectArea < self.minlighterarea:
+                elif rectArea > self.maxlighterarea or rectArea < self.minlighterarea:
                     ## log.print_debug("rectArea = "+str(rectArea))
                     continue
+                #size[0]是灯条宽 size[1]是灯条长
+                lightBarList.append([center[0],center[1],size[0],size[1],angle]) 
                 if self.debug:
-                        lightBarList.append([center[0],center[1],size[0],size[1],angle,rectProp,angleHori,rectArea])#size[0]是灯条宽 size[1]是灯条长
-                else:
-                        lightBarList.append([center[0],center[1],size[0],size[1],angle]) 
-                ## log.print_debug("size[0]="+str(size[0]),"size[1]="+str(size[1]))
+                    #如果开启了debug模式，向类变量更新值
+                    self.lightBarList.append([center[0],center[1],size[0],size[1],angle,rectProp,angleHori,rectArea])
+                    # log.print_debug("size[0]="+str(size[0]),"size[1]="+str(size[1]))
             else :
                 # log.print_debug("<5")
                 pass
 
-        if self.debug:
-            #如果开启了debug模式，向类变量更新值
-            self.lightBarList = lightBarList
         return lightBarList
 
 
@@ -192,10 +189,6 @@ class GetArmor:
                 armorArea = xlength*ylength                        #装甲板面积
                 angle = abs((y0-y1)/(x0-x1))                       #装甲板角度
                 yixaingangleDiff = 3
-
-                if((s0*l0 + s1*l1) < 500):
-                    self.angleDiff = 8
-                    yixaingangleDiff = 5
                 #区分左右装甲板，算出灯板角度
                 if x0 > x1:
                     angle = angle*180/math.pi
@@ -206,19 +199,19 @@ class GetArmor:
                     # log.print_debug("arealongRatio = "+str(arealongRatio)+str(self.minarealongRatio)+str(self.maxarealongRatio))
                     continue
                 #灯条宽宽比过大过小不要
-                if areawidthRatio < 0.35 or areawidthRatio > (2.86):
+                if areawidthRatio < 0.35 or areawidthRatio > 2.86:
                     # log.print_debug("areawidthRatio = "+str(areawidthRatio))
                     continue
                 #灯条角度差过大不要
                 if angleDiff > self.angleDiff and angleDiff < 180-self.angleDiff:
                     # log.print_debug("angleDiff = "+str(angleDiff))
                     continue      
-                #灯条yixiang角度差过大不要
+                #灯条异向角度差过大不要
                 if angleDiff > 90 and angleDiff < 180 - yixaingangleDiff:
                     # log.print_debug("yixaingangleDiff = "+str(angleDiff))
                     continue
                 #灯条面积比太大不要
-                if areaRatio > 3.3 or areaRatio < (0.3):
+                if areaRatio > 3 or areaRatio < 0.28:
                     # log.print_debug("areaRatio = "+str(areaRatio))
                     continue
                 #灯条中心太近不要
@@ -246,15 +239,10 @@ class GetArmor:
                     # log.print_debug("两个灯条y轴高度差过大不要"+str(abs(y0-y1)/ylength))
                     continue
 				# #装甲板长宽比太大或太小不要
-                # if armorProp >= self.minarmorProp and armorProp <= self.maxarmorProp:
-                #     kao = 1
-                # elif armorProp >= self.minBigarmorProp and armorProp <= self.maxBigarmorProp:    
-                #     kao = 2
-                # else:
-                #     continue    
-                z = self.GetArmorDistance(s0,s1)
-                z_distance = z
-                realCenter_list.append([xCenter,yCenter,xlength,ylength,angle,z_distance])
+                if armorProp < self.minarmorProp or armorProp > self.maxarmorProp:
+                    continue    
+                z = self.GetArmorDistance(min(l1,l0),max(l1,l0))
+                realCenter_list.append([xCenter,yCenter,xlength,ylength,angle,z])
 
             #挑选距离屏幕中心最近的装甲板
             temp_distence = -1        
@@ -301,24 +289,24 @@ class GetArmor:
             cv2.createTrackbar('highSat', 'colorTest', self.highSat, 255, self.nothing)
             cv2.createTrackbar('highVal', 'colorTest', self.highVal, 255, self.nothing)
             
-            cv2.createTrackbar('lightBarAngleMin0.0', 'armorTest', int(self.minAngleError*10), 3600, self.nothing)
-            cv2.createTrackbar('lightBarAngleMax0.0', 'armorTest', int(self.maxAngleError*10), 3600, self.nothing)
-            cv2.createTrackbar('lightBarAreaMin', 'armorTest', int(self.minlighterarea), 255, self.nothing)
-            cv2.createTrackbar('lightBarAreaMax', 'armorTest', int(self.maxlighterarea), 10000, self.nothing)
-            cv2.createTrackbar('lightBarL/WMin0.00', 'armorTest', int(self.minlighterProp*100), 500, self.nothing)
-            cv2.createTrackbar('lightBarL/WMax0.00', 'armorTest', int(self.maxlighterProp*100), 3000, self.nothing)
-            cv2.createTrackbar('lightBarAngleErr0.0', 'armorTest', int(self.angleDiff*10), 3600, self.nothing)
-            cv2.createTrackbar('lightBarAreaErr', 'armorTest', int(self.lightBarAreaDiff), 10000, self.nothing)
-            cv2.createTrackbar('lightBarL/LMax0.00', 'armorTest', int(self.maxarealongRatio*100), 300, self.nothing)
-            cv2.createTrackbar('lightBarL/LMin0.00', 'armorTest', int(self.minarealongRatio*100), 100, self.nothing)
-            cv2.createTrackbar('armorAngleMin0.0', 'armorTest', int(self.armorAngleMin*10), 3600, self.nothing)
-            cv2.createTrackbar('armorAreaMin','armorTest', int(self.minarmorArea), 5000, self.nothing)
-            cv2.createTrackbar('armorAreaMax', 'armorTest', int(self.maxarmorArea), 100000, self.nothing)
-            cv2.createTrackbar('armorL/WMin0.00', 'armorTest', int(self.minarmorProp*100), 255, self.nothing)
-            cv2.createTrackbar('armorL/WMax0.00', 'armorTest', int(self.maxarmorProp*100), 600, self.nothing)
+            cv2.createTrackbar('灯条角度最小值0.0', 'armorTest', int(self.minAngleError*10), 3600, self.nothing)
+            cv2.createTrackbar('灯条角度最大值0.0', 'armorTest', int(self.maxAngleError*10), 3600, self.nothing)
+            cv2.createTrackbar('灯条面积最小值', 'armorTest', int(self.minlighterarea), 255, self.nothing)
+            cv2.createTrackbar('灯条面积最大值', 'armorTest', int(self.maxlighterarea), 5000, self.nothing)
+            cv2.createTrackbar('灯条长宽比最小值0.00', 'armorTest', int(self.minlighterProp*100), 500, self.nothing)
+            cv2.createTrackbar('灯条长宽比最大值0.00', 'armorTest', int(self.maxlighterProp*100), 3000, self.nothing)
+            cv2.createTrackbar('灯条角度差0.0', 'armorTest', int(self.angleDiff*10), 3600, self.nothing)
+            cv2.createTrackbar('灯条面积差', 'armorTest', int(self.lightBarAreaDiff), 6000, self.nothing)
+            cv2.createTrackbar('灯条长长比最大值0.00', 'armorTest', int(self.maxarealongRatio*100), 300, self.nothing)
+            cv2.createTrackbar('灯条长长比最小值0.00', 'armorTest', int(self.minarealongRatio*100), 100, self.nothing)
+            cv2.createTrackbar('装甲板角度最小值0.0', 'armorTest', int(self.armorAngleMin*10), 3600, self.nothing)
+            cv2.createTrackbar('装甲板面积最小值','armorTest', int(self.minarmorArea), 5000, self.nothing)
+            cv2.createTrackbar('装甲板面积最大值', 'armorTest', int(self.maxarmorArea), 60000, self.nothing)
+            cv2.createTrackbar('装甲板长宽比最小值0.00', 'armorTest', int(self.minarmorProp*100), 255, self.nothing)
+            cv2.createTrackbar('装甲板长宽比最大值0.00', 'armorTest', int(self.maxarmorProp*100), 600, self.nothing)
             cv2.createTrackbar('大装甲板L/WMin0.00', 'armorTest', int(self.minBigarmorProp*100), 300, self.nothing)
             cv2.createTrackbar('大装甲板L/WMax0.00', 'armorTest', int(self.maxBigarmorProp*100), 600, self.nothing)
-            cv2.createTrackbar('distance', 'armorTest', int(self.kh), 40000, self.nothing)
+            cv2.createTrackbar('测距参数', 'armorTest', int(self.kh), 40000, self.nothing)
 
 
     def updata_argument(self):
@@ -333,24 +321,24 @@ class GetArmor:
             hsvPara_high = [highHue,highSat,highVal]
             hsvPara_low = [lowHue,lowSat,lowVal]
             self.hsvPara = np.array([hsvPara_low,hsvPara_high])
-            self.minAngleError = float(cv2.getTrackbarPos('lightBarAngleMin0.0', 'armorTest'))/10
-            self.maxAngleError = float(cv2.getTrackbarPos('lightBarAngleMax0.0', 'armorTest'))/10
-            self.minlighterarea = cv2.getTrackbarPos('lightBarAreaMin', 'armorTest')
-            self.maxlighterarea = cv2.getTrackbarPos('lightBarAreaMax', 'armorTest')
-            self.minlighterProp = float(cv2.getTrackbarPos('lightBarL/WMin0.00', 'armorTest'))/100
-            self.maxlighterProp = float(cv2.getTrackbarPos('lightBarL/WMax0.00', 'armorTest'))/100
-            self.angleDiff = float(cv2.getTrackbarPos('lightBarAngleErr0.0', 'armorTest'))/10
-            self.lightBarAreaDiff = cv2.getTrackbarPos('lightBarAreaErr', 'armorTest')
-            self.maxarealongRatio = float(cv2.getTrackbarPos('lightBarL/LMax0.00', 'armorTest'))/100
-            self.minarealongRatio = float(cv2.getTrackbarPos('lightBarL/LMin0.00', 'armorTest'))/100
-            self.armorAngleMin = float(cv2.getTrackbarPos('armorAngleMin0.0', 'armorTest'))/10
-            self.minarmorArea = cv2.getTrackbarPos('armorAreaMin', 'armorTest')
-            self.maxarmorArea = cv2.getTrackbarPos('armorAreaMax', 'armorTest')
-            self.minarmorProp = float(cv2.getTrackbarPos('armorL/WMin0.00', 'armorTest'))/100
-            self.maxarmorProp = float(cv2.getTrackbarPos('armorL/WMax0.00', 'armorTest'))/100
+            self.minAngleError = float(cv2.getTrackbarPos('灯条角度最小值0.0', 'armorTest'))/10
+            self.maxAngleError = float(cv2.getTrackbarPos('灯条角度最大值0.0', 'armorTest'))/10
+            self.minlighterarea = cv2.getTrackbarPos('灯条面积最小值', 'armorTest')
+            self.maxlighterarea = cv2.getTrackbarPos('灯条面积最大值', 'armorTest')
+            self.minlighterProp = float(cv2.getTrackbarPos('灯条长宽比最小值0.00', 'armorTest'))/100
+            self.maxlighterProp = float(cv2.getTrackbarPos('灯条长宽比最大值0.00', 'armorTest'))/100
+            self.angleDiff = float(cv2.getTrackbarPos('灯条角度差0.0', 'armorTest'))/10
+            self.lightBarAreaDiff = cv2.getTrackbarPos('灯条面积差', 'armorTest')
+            self.maxarealongRatio = float(cv2.getTrackbarPos('灯条长长比最大值0.00', 'armorTest'))/100
+            self.minarealongRatio = float(cv2.getTrackbarPos('灯条长长比最小值0.00', 'armorTest'))/100
+            self.armorAngleMin = float(cv2.getTrackbarPos('装甲板角度最小值0.0', 'armorTest'))/10
+            self.minarmorArea = cv2.getTrackbarPos('装甲板面积最小值', 'armorTest')
+            self.maxarmorArea = cv2.getTrackbarPos('装甲板面积最大值', 'armorTest')
+            self.minarmorProp = float(cv2.getTrackbarPos('装甲板长宽比最小值0.00', 'armorTest'))/100
+            self.maxarmorProp = float(cv2.getTrackbarPos('装甲板长宽比最大值0.00', 'armorTest'))/100
             self.minBigarmorProp = float(cv2.getTrackbarPos('大装甲板L/WMin0.00', 'armorTest'))/100
             self.maxBigarmorProp = float(cv2.getTrackbarPos('大装甲板L/WMax0.00', 'armorTest'))/100
-            self.kh = float(cv2.getTrackbarPos('distance', 'armorTest'))
+            self.kh = float(cv2.getTrackbarPos('测距参数', 'armorTest'))
 
     
     def update_json(self):
@@ -423,8 +411,8 @@ class GetArmor:
         lightBarList = self.lightBarList
         realCenter_list = self.realCenter_list
         x,y = self.x, self.y
-        frame_debug = self.frame_debug
-        mask = self.mask
+        frame_debug = self.frame_debug.copy()
+        mask = self.mask.copy()
         for i in range(len(lightBarList)):
             log.print_debug(lightBarList[i])
             cv2.ellipse(frame_debug,(int(lightBarList[i][0]),int(lightBarList[i][1])),(int(lightBarList[i][2]/2),int(lightBarList[i][3]/2)),lightBarList[i][4],0,360,(0,255,0),2,8)

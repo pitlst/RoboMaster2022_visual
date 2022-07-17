@@ -4,7 +4,7 @@
         "center_dis_x":0,
         "实际旋转中心与Rx方向的偏差":"",
 
-        "center_dis_y":0,
+        "center_dis_y":1,
         "实际旋转中心与Ry方向的偏差":"", 
         
         "model_path":"./model/bestyao_2_416.xml",
@@ -23,11 +23,17 @@
         "predict_small":36,
         "小符时预测角度参数":"单位是度",
 
-        "predict_big":30,
+        "predict_big":5,
         "大符时预测角度参数":"单位是时间s",
 
         "delta_angle_distance":10,
-        "用于判断大幅是或否切换的角度范围":""
+        "用于判断大幅是或否切换的角度范围":"",
+
+        "R_noise":0.1,
+        "卡尔曼滤波，测量噪声":"",
+
+        "Q_noise":10,
+        "卡尔曼滤波，过程噪声":""
         
     }
   

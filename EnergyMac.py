@@ -1,6 +1,7 @@
 import cv2
 import math
 import json
+import copy
 import time
 import numpy as np
 from logger import log
@@ -43,10 +44,11 @@ class GetEnergyMac:
         #初始化debug参数
         if self.debug:
             self.t0 = time.time()
-            self.img = np.array([0]).astype(np.float32)
-            self.img2 = np.array([0]).astype(np.float32)
-            self.img3 = np.array([0]).astype(np.float32)
-            self.img4 = np.array([0]).astype(np.float32)
+            self.img = np.zeros( [ 480, 640 ], dtype = np.uint8 )
+            self.img2 = np.zeros( [ 480, 640 ], dtype = np.uint8 )
+            self.img3 = np.zeros( [ 480, 640 ], dtype = np.uint8 )
+            self.img4 = np.zeros( [ 480, 640 ], dtype = np.uint8 )
+            self.img5 = np.zeros( [ 480, 640 ], dtype = np.uint8 )
             self.colors = [[255,255,0],[0,255,0],[0,255,255]]
             self.getvar_label = False
             self.pred = [[]]
@@ -321,6 +323,7 @@ class GetEnergyMac:
                     self.pass_number = 0
         #如果都没有，累了，毁灭吧
         if len(Center) == 0:
+            log.print_info('can not find center')
             Center = [-1,-1,-1,-1]
 
         return Center
@@ -358,7 +361,7 @@ class GetEnergyMac:
                     break
         return hit_pos
 
-    def GetHitPointDL(self, frame, f_time):
+    def GetHitPointDL(self, frame):
         #保护图像变量用来画
         x, y = -1, -1
         #预处理部分
@@ -374,6 +377,7 @@ class GetEnergyMac:
             mask = self.HSV_Process(frame_reasize)
             center_tradition = self.FindRsignScope(mask)
         else:
+            mask = np.zeros( [ 480, 640 ], dtype = np.uint8 )
             center_tradition = [[-1,-1,-1,-1]]
         #深度学习部分
         frame_deal = frame_reasize.astype('float32')
@@ -387,26 +391,26 @@ class GetEnergyMac:
         center, result= self.my_nms(pred)
         #筛选中心
         center = self.center_filter(center,center_tradition)
+        copy_center = copy.deepcopy(center)
         if center[0] == -1 or center[1] == -1:
             x,y = -1,-1
             hit_pos = [[-1,-1]]
         else:
-            #对找到的R进行补偿使其接近实际旋转中心    
-            center[0] = center[0] + self.center_dis_x
-            center[1] = center[1] + self.center_dis_y
+            #对找到的R进行补偿使其接近实际旋转中心
+            copy_center[0] = float(copy_center[0] + self.center_dis_x)*self.frame_size/self.model_img_size
+            copy_center[1] = float(copy_center[1] + self.center_dis_y)*self.frame_size/self.model_img_size
             #筛选待击打装甲板
             hit_pos = self.energy_filter(center,result)
-            x = float(hit_pos[0][0])/self.model_img_size*self.frame_size
-            y = float(hit_pos[0][1])/self.model_img_size*self.frame_size
-
+            x = float(hit_pos[0][0])*self.frame_size/self.model_img_size
+            y = float(hit_pos[0][1])*self.frame_size/self.model_img_size
 
         if self.debug:
             #如果开启了debug模式，向类变量更新值
-            self.img4 = frame.copy()
-            self.img5 = mask.copy()
-            self.img = frame_reasize.copy()
-            self.img2 = frame_reasize.copy()
-            self.img3 = frame_reasize.copy()
+            self.img4 = frame
+            self.img5 = mask
+            self.img = frame_reasize
+            self.img2 = frame_reasize
+            self.img3 = frame_reasize
             self.result = np.array(result)
             self.pred = pred[0]
             self.center = center
@@ -419,21 +423,21 @@ class GetEnergyMac:
                 self.update_json()
                 self.t0 = time.time()
 
-        return x,y,center
+        return x,y,copy_center
 
 
     def HSV_Process(self,frame):
         #图像二值化
-        frame = cv2.GaussianBlur(frame,(7,7),0)
+        frame = cv2.GaussianBlur(frame,(13,13),0)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
         mask = cv2.inRange(frame, self.hsv_low, self.hsv_high)
+        mask = cv2.dilate(mask, (13,13))
         return mask
 
 
     def FindRsignScope(self,mask):
         #筛选中心R
         Center_return = []
-        mask = cv2.dilate(mask, (13,13))
         #对于opencv3，轮廓寻找函数有3个返回值，对于opencv4只有两个
         if self.version:
             contours, hierarchy = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
@@ -587,10 +591,10 @@ class GetEnergyMac:
             cv2.createTrackbar('MaxRsS0.0000', 'energyTest', int(self.MaxRsS/self.model_img_size*10000), 10000, self.nothing)
             cv2.createTrackbar('MinRsS0.0000', 'energyTest', int(self.MinRsS/self.model_img_size*10000), 10000, self.nothing)
             cv2.createTrackbar('MaxRsRatio0.000', 'energyTest', int(self.MaxRsRatio/self.model_img_size*1000), 2000, self.nothing)
-            cv2.createTrackbar('fan_armor_distence_max0.000', 'energyTest', int(self.fan_armor_distence_max/self.model_img_size*1000), 255, self.nothing)
+            cv2.createTrackbar('fan_armor_distence_max0.000', 'energyTest', int(self.fan_armor_distence_max/self.model_img_size*1000), 500, self.nothing)
             cv2.createTrackbar('fan_armor_distence_min0.000', 'energyTest', int(self.fan_armor_distence_min/self.model_img_size*1000), 255, self.nothing)
-            cv2.createTrackbar('armor_R_distance_max0.000', 'energyTest', int(self.armor_R_distance_max/self.model_img_size*1000), 255, self.nothing)
-            cv2.createTrackbar('armor_R_distance_min0.000', 'energyTest', int(self.armor_R_distance_min/self.model_img_size*1000), 255, self.nothing)
+            cv2.createTrackbar('armor_R_distance_max0.000', 'energyTest', int(self.armor_R_distance_max/self.model_img_size*1000), 1000, self.nothing)
+            cv2.createTrackbar('armor_R_distance_min0.000', 'energyTest', int(self.armor_R_distance_min/self.model_img_size*1000), 500, self.nothing)
 
 
     def updata_argument(self):
@@ -645,19 +649,19 @@ class GetEnergyMac:
 
     def get_debug_frame(self):
         #处理并返回显示所需要的debug图像
-        pred = self.pred
-        center = self.center
-        result = self.result
-        hit_pos = self.hit_pos
-        center_tradition = self.center_tradition
-        x,y = self.x, self.y
-        img = self.draw_pred(self.img,pred,center)
+        pred = copy.deepcopy(self.pred)
+        center = copy.deepcopy(self.center)
+        result = copy.deepcopy(self.result)
+        hit_pos = copy.deepcopy(self.hit_pos)
+        center_tradition = copy.deepcopy(self.center_tradition)
+        x,y = copy.deepcopy(self.x), copy.deepcopy(self.y)
+        img = self.draw_pred(copy.deepcopy(self.img),pred,center)
         img = self.draw_center(img,center)
-        img2 = self.draw_pred(self.img2,result,center)
+        img2 = self.draw_pred(copy.deepcopy(self.img2),result,center)
         img2 = self.draw_center(img2,center)
-        img3 = self.img3
-        img4 = self.img4
-        img5 = self.img5
+        img3 = copy.deepcopy(self.img3)
+        img4 = copy.deepcopy(self.img4)
+        img5 = copy.deepcopy(self.img5)
         if len(hit_pos):
             cv2.circle(img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_max),self.colors[2],1)
             cv2.circle(img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_min),self.colors[2],1)

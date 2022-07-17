@@ -38,11 +38,10 @@ import time
 import os
 import signal
 import ctypes
+import traceback
 from Communication import MySerial
 from Aimbot import GetArmor
 from logger import log, video_writer
-from EnergyMac import GetEnergyMac
-from Eenergy_predicted import AnglePredicted
 #根据平台调用不同的图像获取类，注意，win平台无法调取海康相机
 if sys.platform.startswith('win'):
     log.print_info('run computer is wim and can not open HIVISION')
@@ -50,6 +49,19 @@ if sys.platform.startswith('win'):
 else:
     log.print_info('run computer is linux')
     from GetFrame import GetFrame
+#该变量为打符是否初始化的标志位
+energy_label = True
+#根据环境选择打符是否开启
+try:
+    from EnergyMac import GetEnergyMac
+    from Eenergy_predicted import AnglePredicted
+except ImportError:
+    log.print_info('can not find request module, energy find can not init')
+    energy_label = False
+except Exception as e: 
+    traceback.print_exc()
+    raise ValueError("成功退出程序 导入包错误")
+
 
 
 #该变量为退出线程的标志位
@@ -79,11 +91,12 @@ class Main:
         #初始化传统视觉自瞄类，需要debug模式标志位，数据输入标志位，颜色和模式信息
         self.GetArmor_class = GetArmor(self.debug,self.video_debug_set,self.color_init,self.mode_init)
         log.print_info('aimbot init done')
-        #初始化深度学习识别类，需要debug模式标志位，数据输入标志位,颜色信息
-        self.GetEnergyMac_class = GetEnergyMac(self.debug,self.video_debug_set,self.color_init)
-        #初始化深度学习预测类，需要模式信息
-        self.AnglePredicted_class = AnglePredicted(self.mode_init)
-        log.print_info('energy init done')
+        if energy_label:
+            #初始化深度学习识别类，需要debug模式标志位，数据输入标志位,颜色信息
+            self.GetEnergyMac_class = GetEnergyMac(self.debug,self.video_debug_set,self.color_init)
+            #初始化深度学习预测类，需要模式信息
+            self.AnglePredicted_class = AnglePredicted(self.mode_init)
+            log.print_info('energy init done')
         #根据标志位开始录像
         if self.video_writer_debug:
             video_writer.set_mode(self.mode_init)
@@ -132,17 +145,18 @@ class Main:
                     #如果切换颜色
                     if new[0] != old[0]:
                         self.GetArmor_class.reinit(new[0],new[1])
-                        self.GetEnergyMac_class.reinit(new[0])
+                        if energy_label:
+                            self.GetEnergyMac_class.reinit(new[0])
                     #如果切换模式
                     elif new[1] != old[1]:
                         video_writer.set_mode(new[1])
                         reset_label = new[1]
                         if new[1] in [0,3]:
                             self.GetArmor_class.reinit(new[0],new[1])
-                        elif new[1] in [1,2,4,5]:
+                        elif new[1] in [1,2,4,5] and energy_label:
                             self.AnglePredicted_class.reinit(new[1])
                         #自瞄打符切换时重启相机
-                        if (old[1] in [0,3] and new[1] in [1,2,4,5]) or (new[1] in [0,3] and old[1] in [1,2,4,5]):                            
+                        if (old[1] in [0,3] and new[1] in [1,2,4,5]) or (new[1] in [0,3] and old[1] in [1,2,4,5]) and energy_label:                            
                             self.GetFrame_class.restart_camera(new[1])
                     old = new
                     log.print_info('reset all done')
@@ -159,8 +173,8 @@ class Main:
             if type(frame) is np.ndarray:
                 if reset_label in [0,3]:
                     msg_temp = list(self.GetArmor_class.GetArmor(frame))
-                elif reset_label in [1,2,4,5]:
-                    msg_temp = self.GetEnergyMac_class.GetHitPointDL(frame,f_time)
+                elif reset_label in [1,2,4,5] and energy_label:
+                    msg_temp = self.GetEnergyMac_class.GetHitPointDL(frame)
                     msg_temp = list(self.AnglePredicted_class.NormalHit(msg_temp,f_time))
             #串口发送消息
             self.MySerial_class.send_message(msg_temp)
@@ -175,18 +189,21 @@ class Main:
             cv2.namedWindow('energyTest')
             cv2.namedWindow('armorTest')
             self.GetArmor_class.TrackerBar_create()
-            self.GetEnergyMac_class.TrackerBar_create()
+            if energy_label:
+                self.GetEnergyMac_class.TrackerBar_create()
         while label:
-            #更新滑动条参数
             self.GetArmor_class.updata_argument()
-            self.GetEnergyMac_class.updata_argument()
-            #获取显示的图像
             frame_set1 = self.GetArmor_class.get_debug_frame()
-            frame_set2 = self.GetEnergyMac_class.get_debug_frame()
             for i,frame in enumerate(frame_set1):
                 cv2.imshow('aimbot_'+str(i),frame)
-            for i,frame in enumerate(frame_set2):
-                cv2.imshow('energy_'+str(i),frame)
+            if energy_label:
+                self.GetEnergyMac_class.updata_argument()
+                frame_set2 = self.GetEnergyMac_class.get_debug_frame()
+                msg_set = self.AnglePredicted_class.get_debug_msg()
+                for i,frame in enumerate(frame_set2):
+                    if i == 3:
+                        cv2.circle(frame,(int(msg_set[0]),int(msg_set[1])),5,(0,255,255),-1)
+                    cv2.imshow('energy_'+str(i),frame)
             k = cv2.waitKey(timeout)
             if k == 27:
                 cv2.destroyAllWindows()
