@@ -87,6 +87,8 @@ class MyVideoWriter:
             self.video_fps = int(load_dict["Debug"]["video_fps"])
     
     def write(self,frame,time):
+        if frame.shape[-1] != 3:
+            frame = frame = cv2.cvtColor(frame, cv2.COLOR_BayerRG2RGB)
         if self.mode:
             self.video_writer_energy.write(frame)
             self.file_energy.write(str(time)+'\n')

@@ -39,6 +39,9 @@ class AnglePredicted:
         #大符历史记录初始化
         self.history_angle_diff_list = []
         self.begin_time = None
+
+        self.hitX = -1
+        self.hitY = -1
     
     def reinit(self,mode):
         #打符预测类重初始化
@@ -127,8 +130,8 @@ class AnglePredicted:
             forecast_angle = forecast_angle/180*math.pi
             hitX = center[0] + hitDis*math.cos(forecast_angle)
             hitY = center[1] + hitDis*math.sin(forecast_angle)
-            self.x = hitX
-            self.y = hitY
+            self.hitX = hitX
+            self.hitY = hitY
             return hitX, hitY, 1
         else:
             return -1,-1,-1

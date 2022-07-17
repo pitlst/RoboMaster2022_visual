@@ -24,7 +24,7 @@
       "com_debug_mode":4,
       "串口debug模式下的模式传值":"0为自瞄，1,2为深度学习打小幅，4,5为深度学习打大符,3为哨兵模式",
       
-      "video_writer":0,
+      "video_writer":1,
       "是否开启录像":"1为是，0为否",
 
       "video_interval_fps":10,

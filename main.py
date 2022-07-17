@@ -126,7 +126,6 @@ class Main:
                 temp_num += 1
                 if temp_num > temp_num_max:
                     temp_num = 0
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BayerRG2RGB)
                     video_writer.write(frame,fram_time)
             #根据帧率判断线程是否处于正常状态，不正常引发报错退出
             if fps > 1000:
