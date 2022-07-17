@@ -132,9 +132,15 @@ class GetArmor:
             contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1)
         else:
             _, contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_L1)
+        #轮廓超过400不认为正常识别
+        if(len(contours)>400):
+            lightBarList = []
+            return lightBarList
         for contour in range(len(contours)):
             if len(contours[contour]) >= 5:
+                #size[0]是灯条宽 size[1]是灯条长
                 center, size, angle = cv2.fitEllipse(contours[contour])#反馈的长宽其实就是长的轴和短的轴，所以一定长宽比大于1
+                #对轮廓拟合出现的值进行判断
                 if size[1] <= 0 or size[0] <= 0 or np.isnan(size[0]) or np.isnan(size[1]) :
                     continue
                 rectProp = size[1]/size[0]#灯条长比宽，值大于1
@@ -149,12 +155,11 @@ class GetArmor:
                 elif rectArea > self.maxlighterarea or rectArea < self.minlighterarea:
                     ## log.print_debug("rectArea = "+str(rectArea))
                     continue
-                #size[0]是灯条宽 size[1]是灯条长
-                lightBarList.append([center[0],center[1],size[0],size[1],angle]) 
                 if self.debug:
                     #如果开启了debug模式，向类变量更新值
                     self.lightBarList.append([center[0],center[1],size[0],size[1],angle,rectProp,angleHori,rectArea])
-                    # log.print_debug("size[0]="+str(size[0]),"size[1]="+str(size[1]))
+                else:
+                    self.lightBarList.append([center[0],center[1],size[0],size[1],angle]) 
             else :
                 # log.print_debug("<5")
                 pass
@@ -188,7 +193,10 @@ class GetArmor:
                 armorProp = xlength/ylength                        #装甲板长宽比
                 armorArea = xlength*ylength                        #装甲板面积
                 angle = abs((y0-y1)/(x0-x1))                       #装甲板角度
-                yixaingangleDiff = 3
+                yixaingangleDiff = 6
+                if((s0*l0 + s1*l1) < 500):
+                    self.angleDiff = 10
+                    yixaingangleDiff = 10
                 #区分左右装甲板，算出灯板角度
                 if x0 > x1:
                     angle = angle*180/math.pi
@@ -211,7 +219,7 @@ class GetArmor:
                     # log.print_debug("yixaingangleDiff = "+str(angleDiff))
                     continue
                 #灯条面积比太大不要
-                if areaRatio > 3 or areaRatio < 0.28:
+                if areaRatio > 4 or areaRatio < 0.25:
                     # log.print_debug("areaRatio = "+str(areaRatio))
                     continue
                 #灯条中心太近不要
@@ -235,13 +243,15 @@ class GetArmor:
                     # log.print_debug("armorArea < self.minarmorArea"+str(armorArea))
                     continue
 				#两个灯条y轴高度差过大不要
-                if(abs(y0-y1)>ylength*1.2):
+                if(abs(y0-y1)>ylength*1.4):  #1.2
                     # log.print_debug("两个灯条y轴高度差过大不要"+str(abs(y0-y1)/ylength))
                     continue
 				# #装甲板长宽比太大或太小不要
                 if armorProp < self.minarmorProp or armorProp > self.maxarmorProp:
                     continue    
-                z = self.GetArmorDistance(min(l1,l0),max(l1,l0))
+                if armorProp < self.minBigarmorProp or armorProp > self.maxBigarmorProp:
+                    continue   
+                z = self.GetArmorDistance(s0,s1)
                 realCenter_list.append([xCenter,yCenter,xlength,ylength,angle,z])
 
             #挑选距离屏幕中心最近的装甲板
@@ -292,16 +302,16 @@ class GetArmor:
             cv2.createTrackbar('灯条角度最小值0.0', 'armorTest', int(self.minAngleError*10), 3600, self.nothing)
             cv2.createTrackbar('灯条角度最大值0.0', 'armorTest', int(self.maxAngleError*10), 3600, self.nothing)
             cv2.createTrackbar('灯条面积最小值', 'armorTest', int(self.minlighterarea), 255, self.nothing)
-            cv2.createTrackbar('灯条面积最大值', 'armorTest', int(self.maxlighterarea), 5000, self.nothing)
+            cv2.createTrackbar('灯条面积最大值', 'armorTest', int(self.maxlighterarea), 10000, self.nothing)
             cv2.createTrackbar('灯条长宽比最小值0.00', 'armorTest', int(self.minlighterProp*100), 500, self.nothing)
             cv2.createTrackbar('灯条长宽比最大值0.00', 'armorTest', int(self.maxlighterProp*100), 3000, self.nothing)
             cv2.createTrackbar('灯条角度差0.0', 'armorTest', int(self.angleDiff*10), 3600, self.nothing)
-            cv2.createTrackbar('灯条面积差', 'armorTest', int(self.lightBarAreaDiff), 6000, self.nothing)
+            cv2.createTrackbar('灯条面积差', 'armorTest', int(self.lightBarAreaDiff), 10000, self.nothing)
             cv2.createTrackbar('灯条长长比最大值0.00', 'armorTest', int(self.maxarealongRatio*100), 300, self.nothing)
             cv2.createTrackbar('灯条长长比最小值0.00', 'armorTest', int(self.minarealongRatio*100), 100, self.nothing)
             cv2.createTrackbar('装甲板角度最小值0.0', 'armorTest', int(self.armorAngleMin*10), 3600, self.nothing)
             cv2.createTrackbar('装甲板面积最小值','armorTest', int(self.minarmorArea), 5000, self.nothing)
-            cv2.createTrackbar('装甲板面积最大值', 'armorTest', int(self.maxarmorArea), 60000, self.nothing)
+            cv2.createTrackbar('装甲板面积最大值', 'armorTest', int(self.maxarmorArea), 100000, self.nothing)
             cv2.createTrackbar('装甲板长宽比最小值0.00', 'armorTest', int(self.minarmorProp*100), 255, self.nothing)
             cv2.createTrackbar('装甲板长宽比最大值0.00', 'armorTest', int(self.maxarmorProp*100), 600, self.nothing)
             cv2.createTrackbar('大装甲板L/WMin0.00', 'armorTest', int(self.minBigarmorProp*100), 300, self.nothing)
@@ -365,7 +375,7 @@ class GetArmor:
         #这里用于校验，保证序列化写入json前的数字是正常的，防止程序在debug时出现bug，导致参数丢失
         if temp_list.count(0.) > 5 or temp_list.count(-1) > 0 or \
             self.hsvPara[1][1] < 250 or self.hsvPara[1][2] < 250:
-            pass
+            log.print_error('json write failed, para is error')
         else:
             with open(self.path,'r',encoding = 'utf-8') as load_f:
                 load_dict = json.load(load_f,strict=False)
@@ -408,9 +418,9 @@ class GetArmor:
 
     def get_debug_frame(self):
         #处理并返回显示所需要的debug图像
-        lightBarList = self.lightBarList
-        realCenter_list = self.realCenter_list
-        x,y = self.x, self.y
+        lightBarList = copy.deepcopy(self.lightBarList)
+        realCenter_list = copy.deepcopy(self.realCenter_list)
+        x,y = copy.deepcopy(self.x) ,copy.deepcopy(self.y)
         frame_debug = self.frame_debug.copy()
         mask = self.mask.copy()
         for i in range(len(lightBarList)):

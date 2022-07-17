@@ -23,14 +23,14 @@ class GetEnergyMac:
         self.model_img_size = self.h
         self.last_x = self.model_img_size/2
         self.last_y = self.model_img_size/2
-
+        #json相关变量从比例映射至像素
         self.fan_armor_distence_max = self.fan_armor_distence_max*self.model_img_size
         self.fan_armor_distence_min = self.fan_armor_distence_min*self.model_img_size
         self.armor_R_distance_max = self.armor_R_distance_max*self.model_img_size
         self.armor_R_distance_min = self.armor_R_distance_min*self.model_img_size
         #同方向局部nms最大值
         self.nms_distence_max = self.nms_distence_max*self.model_img_size
-        # 这部分为最大最小面积
+        #这部分为最大最小面积
         self.MaxRsS = self.MaxRsS*(self.model_img_size**2)
         self.MinRsS = self.MinRsS*(self.model_img_size**2)
         #关于中心丢失判断的相关初始化
@@ -134,6 +134,69 @@ class GetEnergyMac:
         return premat,pregrid
     
     
+    
+
+    def GetHitPointDL(self, frame):
+        #保护图像变量用来画
+        x, y = -1, -1
+        #预处理部分
+        if self.video_debug_set == 0:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BayerRG2RGB)
+        if frame.shape[:-1] != (self.h, self.w):
+            frame_reasize = cv2.resize(frame,(self.w,self.h))
+        else:
+            frame_reasize = frame
+        #传统视觉识别R 
+        mask = self.HSV_Process(frame_reasize)
+        center_tradition = self.FindRsignScope(mask)
+        #深度学习前处理
+        frame_deal = frame_reasize.astype('float32')
+        frame_deal = frame_deal/255  #像素归一化
+        frame_deal = frame_deal.transpose((2,0,1))
+        frame_deal = np.expand_dims(frame_deal,axis=0)
+        #推理
+        res = self.exec_net.infer(inputs={self.input_blob: frame_deal})
+        #后处理
+        pred = self.process(res)
+        center, result = self.my_nms(pred)
+        #筛选中心
+        center = self.center_filter(center,center_tradition)
+        copy_center = copy.deepcopy(center)
+        if center[0] == -1 or center[1] == -1:
+            x,y = -1,-1
+            hit_pos = [[-1,-1]]
+        else:
+            #对找到的R进行补偿使其接近实际旋转中心
+            copy_center[0] = float(copy_center[0] + self.center_dis_x)*self.frame_size/self.model_img_size
+            copy_center[1] = float(copy_center[1] + self.center_dis_y)*self.frame_size/self.model_img_size
+            #筛选待击打装甲板
+            hit_pos = self.energy_filter(center,result)
+            x = float(hit_pos[0][0])*self.frame_size/self.model_img_size
+            y = float(hit_pos[0][1])*self.frame_size/self.model_img_size
+            #根据深度学习筛选的装甲板截取图像，二次矫正图像中心值
+            hit_pos = self.tradition_filter(hit_pos,mask)
+
+        if self.debug:
+            #如果开启了debug模式，向类变量更新值
+            self.img4 = frame
+            self.img5 = mask
+            self.img = frame_reasize
+            self.img2 = frame_reasize
+            self.img3 = frame_reasize
+            self.result = np.array(result)
+            self.pred = pred[0]
+            self.center = center
+            self.hit_pos = hit_pos
+            self.center_tradition = center_tradition
+            self.x = x
+            self.y = y
+            #每隔1秒更新一次json文件
+            if time.time()-self.t0 > 1:
+                self.update_json()
+                self.t0 = time.time()
+
+        return x,y,copy_center
+
     def process(self,res):
         #对网络输出进行处理
         z = []
@@ -241,8 +304,6 @@ class GetEnergyMac:
                     else:
                         if Center[4] < temp_j[4]:
                             Center = temp_j
-            else:
-                Center = []
         elif self.Energy_R_debug == 1:
             #纯传统视觉,按照历史R位置筛选，取阈值下最近的
             if len(center_tradition):
@@ -282,8 +343,6 @@ class GetEnergyMac:
                     else:
                         if Center[4] < temp_j[4]:
                             Center = temp_j
-            else:
-                Center = []
         elif self.Energy_R_debug == 3:
             #深度学习丢失后用传统视觉弥补，此情况应用于模型状态不好，有大概率漏识别的情况
             #首先将深度学习的center按置信度取最高
@@ -296,24 +355,28 @@ class GetEnergyMac:
                         if deel_center[4] < temp_j[4]:
                             deel_center = temp_j
                 #根据历史位置判断深度学习的是不是误识别
-                if (deel_center[0]-self.last_center[0])**2+(deel_center[1]-self.last_center[1])**2<300:
+                if (deel_center[0]-self.last_center[0])**2+(deel_center[1]-self.last_center[1])**2 < self.nms_distence_max**2:
                     self.last_center = deel_center
                     Center = deel_center
+                    self.pass_number = 0
             #如果没有深度学习输出或者深度学习输出不对而且传统视觉有输出
             if len(Center) == 0 and len(center_tradition):
+                temp_center= []
+                last_dis = self.frame_size**2 #确保该数比任何可能得到的值都大即可
                 if -1 in self.last_center:
-                    Center = center_tradition[0]
-                    self.last_center = Center
+                    temp_center = center_tradition[0]
                 else:
-                    last_dis = math.inf
                     #按照历史R位置筛选，取阈值下最近的
                     for c_t in center_tradition:
                         dis = (self.last_center[0]-c_t[0])**2+(self.last_center[1]-c_t[1])**2
-                        if dis < self.nms_distence_max**2 and last_dis > dis:
-                            Center = c_t
+                        if last_dis > dis:
+                            temp_center = c_t
                             last_dis = dis
-                    if len(Center):
-                        self.last_center = Center
+                #如果有输出，拿来用
+                if len(temp_center) and last_dis > self.nms_distence_max**2:
+                    self.last_center = temp_center
+                    Center = temp_center
+                    self.pass_number = 0
             #如果二者都么有输出，看看历史有没有拿来用
             if len(Center) == 0 and -1 not in self.last_center:
                 Center = self.last_center
@@ -321,11 +384,11 @@ class GetEnergyMac:
                 if self.pass_number > self.pass_number_max:
                     self.last_center = [-1,-1]
                     self.pass_number = 0
+
         #如果都没有，累了，毁灭吧
         if len(Center) == 0:
             log.print_info('can not find center')
             Center = [-1,-1,-1,-1]
-
         return Center
     
     def energy_filter(self,center,result):
@@ -361,77 +424,12 @@ class GetEnergyMac:
                     break
         return hit_pos
 
-    def GetHitPointDL(self, frame):
-        #保护图像变量用来画
-        x, y = -1, -1
-        #预处理部分
-        if self.video_debug_set == 0:
-            frame = cv2.cvtColor(frame, cv2.COLOR_BayerRG2RGB)
-        if frame.shape[:-1] != (self.h, self.w):
-            frame_reasize = cv2.resize(frame,(self.w,self.h))
-        else:
-            frame_reasize = frame
-        # 传统视觉部分,根据debug参数启用
-        # 传统视觉识别R是为了弥补家里的大符的无奈之举，比赛时一般不会出现如此极端的情况
-        if self.Energy_R_debug in [1,2,3]:
-            mask = self.HSV_Process(frame_reasize)
-            center_tradition = self.FindRsignScope(mask)
-        else:
-            mask = np.zeros( [ 480, 640 ], dtype = np.uint8 )
-            center_tradition = [[-1,-1,-1,-1]]
-        #深度学习部分
-        frame_deal = frame_reasize.astype('float32')
-        frame_deal = frame_deal/255  #像素归一化
-        frame_deal = frame_deal.transpose((2,0,1))
-        frame_deal = np.expand_dims(frame_deal,axis=0)
-        #推理
-        res = self.exec_net.infer(inputs={self.input_blob: frame_deal})
-        #后处理
-        pred = self.process(res)
-        center, result= self.my_nms(pred)
-        #筛选中心
-        center = self.center_filter(center,center_tradition)
-        copy_center = copy.deepcopy(center)
-        if center[0] == -1 or center[1] == -1:
-            x,y = -1,-1
-            hit_pos = [[-1,-1]]
-        else:
-            #对找到的R进行补偿使其接近实际旋转中心
-            copy_center[0] = float(copy_center[0] + self.center_dis_x)*self.frame_size/self.model_img_size
-            copy_center[1] = float(copy_center[1] + self.center_dis_y)*self.frame_size/self.model_img_size
-            #筛选待击打装甲板
-            hit_pos = self.energy_filter(center,result)
-            x = float(hit_pos[0][0])*self.frame_size/self.model_img_size
-            y = float(hit_pos[0][1])*self.frame_size/self.model_img_size
-
-        if self.debug:
-            #如果开启了debug模式，向类变量更新值
-            self.img4 = frame
-            self.img5 = mask
-            self.img = frame_reasize
-            self.img2 = frame_reasize
-            self.img3 = frame_reasize
-            self.result = np.array(result)
-            self.pred = pred[0]
-            self.center = center
-            self.hit_pos = hit_pos
-            self.center_tradition = center_tradition
-            self.x = x
-            self.y = y
-            #每隔1秒更新一次json文件
-            if time.time()-self.t0 > 1:
-                self.update_json()
-                self.t0 = time.time()
-
-        return x,y,copy_center
-
 
     def HSV_Process(self,frame):
         #图像二值化
-        frame = cv2.GaussianBlur(frame,(13,13),0)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
         mask = cv2.inRange(frame, self.hsv_low, self.hsv_high)
-        mask = cv2.dilate(mask, (13,13))
+        
         return mask
 
 
@@ -464,96 +462,12 @@ class GetEnergyMac:
                 Center_return.append([center[0],center[1],longSide,shortSide])
 
         return Center_return
+    
+    def tradition_filter(self,hit_pos,mask):
+        
+        #矫正装甲板中心值
 
-    @staticmethod
-    def draw_pred(img,pred,center):
-        #画出来的，按自己喜好来就可以了，深度学习检测基本不用实时调参，不咋重要
-        #这个画扇叶和装甲板
-        colors = [[255,255,0],[0,255,0],[0,255,255]]
-        if None not in pred and len(center):
-            for det in pred:
-                x = det[0]
-                y = det[1]
-                h = det[2]
-                w = det[3]
-                vectorX = x - center[0]
-                vectorY = y - center[1]
-                if det[5]>det[6]:
-                    if det[5] > det[7]:
-                        label = 0
-                    else:
-                        label = 2
-                else:
-                    if det[6] > det[7]:
-                        label = 1
-                    else:
-                        label = 2
-                box = []
-
-                if vectorX > 0 and vectorY > 0:
-                    angle = math.atan(abs(vectorY/vectorX))*180/math.pi
-                elif vectorX < 0 and vectorY > 0:
-                    angle = 180 - math.atan(abs(vectorY/vectorX))*180/math.pi
-                elif vectorX < 0 and vectorY < 0:
-                    angle = 180 + math.atan(abs(vectorY/vectorX))*180/math.pi
-                elif vectorX > 0 and vectorY < 0:
-                    angle = 360 - math.atan(abs(vectorY/vectorX))*180/math.pi
-                elif vectorX == 0 and vectorY > 0:
-                    angle = 270
-                elif vectorX == 0 and vectorY <= 0:
-                    angle = 90
-                elif vectorY == 0 and vectorX > 0:
-                    angle = 0
-                elif vectorY == 0 and vectorX <= 0:
-                    angle = 180
-                angle = angle/180*math.pi
-
-                if label == 0:
-                    angle = angle - math.pi/2
-                x0 = x - h/2*math.cos(angle) + w/2*math.sin(angle)
-                y0 = y - h/2*math.sin(angle) - w/2*math.cos(angle)
-                box.append([x0,y0])
-                x1 = x - h/2*math.cos(angle) - w/2*math.sin(angle)
-                y1 = y - h/2*math.sin(angle) + w/2*math.cos(angle)
-                box.append([x1,y1])
-                x2 = x + h/2*math.cos(angle) - w/2*math.sin(angle)
-                y2 = y + h/2*math.sin(angle) + w/2*math.cos(angle)
-                box.append([x2,y2])
-                x3 = x + h/2*math.cos(angle) + w/2*math.sin(angle)
-                y3 = y + h/2*math.sin(angle) - w/2*math.cos(angle)
-                box.append([x3,y3])
-                box = np.array(box,dtype = 'int32')
-
-                cv2.drawContours(img,[box],0,colors[label],1)
-                cv2.circle(img,(int(x),int(y)),4,colors[label],-1)
-        return img
-
-    @staticmethod
-    def draw_center(img,center):
-        #画出来的，按自己喜好来就可以了，深度学习检测基本不用实时调参，不咋重要
-        angle = 0
-        box = []
-        if len(center):
-            x = center[0]
-            y = center[1]
-            w = center[2]
-            h = center[3]
-            x0 = x - h/2*math.cos(angle) + w/2*math.sin(angle)
-            y0 = y - h/2*math.sin(angle) - w/2*math.cos(angle)
-            box.append([x0,y0])
-            x1 = x - h/2*math.cos(angle) - w/2*math.sin(angle)
-            y1 = y - h/2*math.sin(angle) + w/2*math.cos(angle)
-            box.append([x1,y1])
-            x2 = x + h/2*math.cos(angle) - w/2*math.sin(angle)
-            y2 = y + h/2*math.sin(angle) + w/2*math.cos(angle)
-            box.append([x2,y2])
-            x3 = x + h/2*math.cos(angle) + w/2*math.sin(angle)
-            y3 = y + h/2*math.sin(angle) - w/2*math.cos(angle)
-            box.append([x3,y3])
-            box = np.array(box,dtype = 'int32')          
-            cv2.drawContours(img,[box],0,(0,255,0),1)
-            cv2.circle(img,(int(center[0]),int(center[1])),4,(0,255,0),-1)
-        return img
+        return hit_pos
 
 
     def EuclideanDistance(self,c,c0):
@@ -674,3 +588,94 @@ class GetEnergyMac:
         for c_t in center_tradition:
             cv2.circle(img3,(int(c_t[0]),int(c_t[1])),8,(255,255,255),-1)
         return img, img2, img3, img4, img5
+    
+
+    @staticmethod
+    def draw_pred(img,pred,center):
+        #画出来的，按自己喜好来就可以了，深度学习检测基本不用实时调参，不咋重要
+        #这个画扇叶和装甲板
+        colors = [[255,255,0],[0,255,0],[0,255,255]]
+        if None not in pred and len(center):
+            for det in pred:
+                x = det[0]
+                y = det[1]
+                h = det[2]
+                w = det[3]
+                vectorX = x - center[0]
+                vectorY = y - center[1]
+                if det[5]>det[6]:
+                    if det[5] > det[7]:
+                        label = 0
+                    else:
+                        label = 2
+                else:
+                    if det[6] > det[7]:
+                        label = 1
+                    else:
+                        label = 2
+                box = []
+
+                if vectorX > 0 and vectorY > 0:
+                    angle = math.atan(abs(vectorY/vectorX))*180/math.pi
+                elif vectorX < 0 and vectorY > 0:
+                    angle = 180 - math.atan(abs(vectorY/vectorX))*180/math.pi
+                elif vectorX < 0 and vectorY < 0:
+                    angle = 180 + math.atan(abs(vectorY/vectorX))*180/math.pi
+                elif vectorX > 0 and vectorY < 0:
+                    angle = 360 - math.atan(abs(vectorY/vectorX))*180/math.pi
+                elif vectorX == 0 and vectorY > 0:
+                    angle = 270
+                elif vectorX == 0 and vectorY <= 0:
+                    angle = 90
+                elif vectorY == 0 and vectorX > 0:
+                    angle = 0
+                elif vectorY == 0 and vectorX <= 0:
+                    angle = 180
+                angle = angle/180*math.pi
+
+                if label == 0:
+                    angle = angle - math.pi/2
+                x0 = x - h/2*math.cos(angle) + w/2*math.sin(angle)
+                y0 = y - h/2*math.sin(angle) - w/2*math.cos(angle)
+                box.append([x0,y0])
+                x1 = x - h/2*math.cos(angle) - w/2*math.sin(angle)
+                y1 = y - h/2*math.sin(angle) + w/2*math.cos(angle)
+                box.append([x1,y1])
+                x2 = x + h/2*math.cos(angle) - w/2*math.sin(angle)
+                y2 = y + h/2*math.sin(angle) + w/2*math.cos(angle)
+                box.append([x2,y2])
+                x3 = x + h/2*math.cos(angle) + w/2*math.sin(angle)
+                y3 = y + h/2*math.sin(angle) - w/2*math.cos(angle)
+                box.append([x3,y3])
+                box = np.array(box,dtype = 'int32')
+
+                cv2.drawContours(img,[box],0,colors[label],1)
+                cv2.circle(img,(int(x),int(y)),4,colors[label],-1)
+        return img
+
+    @staticmethod
+    def draw_center(img,center):
+        #画出来的，按自己喜好来就可以了，深度学习检测基本不用实时调参，不咋重要
+        angle = 0
+        box = []
+        if len(center):
+            x = center[0]
+            y = center[1]
+            w = center[2]
+            h = center[3]
+            x0 = x - h/2*math.cos(angle) + w/2*math.sin(angle)
+            y0 = y - h/2*math.sin(angle) - w/2*math.cos(angle)
+            box.append([x0,y0])
+            x1 = x - h/2*math.cos(angle) - w/2*math.sin(angle)
+            y1 = y - h/2*math.sin(angle) + w/2*math.cos(angle)
+            box.append([x1,y1])
+            x2 = x + h/2*math.cos(angle) - w/2*math.sin(angle)
+            y2 = y + h/2*math.sin(angle) + w/2*math.cos(angle)
+            box.append([x2,y2])
+            x3 = x + h/2*math.cos(angle) + w/2*math.sin(angle)
+            y3 = y + h/2*math.sin(angle) - w/2*math.cos(angle)
+            box.append([x3,y3])
+            box = np.array(box,dtype = 'int32')          
+            cv2.drawContours(img,[box],0,(0,255,0),1)
+            cv2.circle(img,(int(center[0]),int(center[1])),4,(0,255,0),-1)
+        return img

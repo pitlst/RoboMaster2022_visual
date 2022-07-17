@@ -11,23 +11,23 @@
             255
         ],
         "hsv_blue_high": [
-            125,
+            35,
             255,
             255
         ],
         "hsv_blue_low": [
-            80,
-            139,
-            85
+            0,
+            85,
+            70
         ]
     },
     "EnergyFind": {
-        "MaxRsS": 0.0007915865384615384,
-        "MinRsS": 0.0004721153846153846,
-        "MaxRsRatio": 557.856,
-        "fan_armor_distence_max": 0.108,
-        "fan_armor_distence_min": 0.062000000000000006,
-        "armor_R_distance_max": 0.255,
-        "armor_R_distance_min": 0.159
+        "MaxRsS": 0.0012598557692307692,
+        "MinRsS": 0.0004716346153846154,
+        "MaxRsRatio": 559.104,
+        "fan_armor_distence_max": 0.143,
+        "fan_armor_distence_min": 0.065,
+        "armor_R_distance_max": 0.294,
+        "armor_R_distance_min": 0.181
     }
 }

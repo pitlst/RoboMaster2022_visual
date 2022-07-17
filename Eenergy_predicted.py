@@ -1,22 +1,7 @@
 import numpy as np
 import math
 import json
-from logger import log
-
-#定义一个装饰器，用于保证函数调用次数
-def count(func):
-    num = 0  # 初始化次数
-    result = 0 #初始化结果
-    def call_fun(*args, **kwargs):
-        nonlocal num # 声明num 变当前作用域局部变量为最临近外层（非全局）作用域变量。
-        nonlocal result
-        num += 1 # 每次调用次数加1
-        if num < 1000:
-            #只有在最开始的1000次调用，函数才会真正执行并更改结果
-            result = func(*args, **kwargs)#原函数
-        return result
-
-    return call_fun
+from logger import log, count
 
 class AnglePredicted:
     def __init__(self,mode):
@@ -202,7 +187,7 @@ class AnglePredicted:
     
     def get_debug_msg(self):
         #返回输出坐标
-        return [self.x,self.y]
+        return [self.hitX,self.hitY]
 
 #卡尔曼滤波
 class KalmanFilter(object):
