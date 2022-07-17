@@ -49,6 +49,16 @@
         "maxarmorProp": 2.8,
         "minBigarmorProp": 2.63,
         "maxBigarmorProp": 4.3,
-        "kh": 29489.0
+        "kh": 29489.0,
+        "area_limit": 500.0,
+        "minareawidthRatio":0.35,
+        "maxareawidthRatio":2.86,
+        "minareaRatio":0.25,
+        "maxareaRatio":4.0,
+        "xcenterdismax":15.0,
+        "ylengthmin":10,
+        "ylengcenterRatio":1.4,
+        "yixaingangleDiff_near":8,
+        "yixaingangleDiff_far":8
     }
 }

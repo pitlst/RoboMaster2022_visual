@@ -23,8 +23,8 @@ class GetArmor:
         #初始化debug参数
         if self.debug:
             self.getvar_label = False
-            self.frame_debug = np.zeros( [ 480, 640 ], dtype = np.uint8 )
-            self.mask = np.zeros( [ 480, 640 ], dtype = np.uint8 )
+            self.frame_debug = np.zeros([480, 640], dtype=np.uint8)
+            self.mask = np.zeros([480,640],dtype=np.uint8)
             self.lightBarList = []
             self.realCenter_list = []
             self.x = -1
@@ -79,7 +79,6 @@ class GetArmor:
             #装甲板筛选
             self.minarealongRatio = load_dict["ArmorFind"]["minarealongRatio"]
             self.maxarealongRatio = load_dict["ArmorFind"]["maxarealongRatio"]
-            
             self.lightBarAreaDiff = load_dict["ArmorFind"]["lightBarAreaDiff"]
             self.armorAngleMin = load_dict["ArmorFind"]["armorAngleMin"]
             self.minarmorArea = load_dict["ArmorFind"]["minarmorArea"]
@@ -98,6 +97,8 @@ class GetArmor:
             self.xcenterdismax = load_dict["ArmorFind"]["xcenterdismax"]
             self.ylengthmin = load_dict["ArmorFind"]["ylengthmin"]
             self.ylengcenterRatio = load_dict["ArmorFind"]["ylengcenterRatio"]
+            self.yixaingangleDiff_near = load_dict["ArmorFind"]["yixaingangleDiff_near"]
+            self.yixaingangleDiff_far = load_dict["ArmorFind"]["yixaingangleDiff_far"]
             #测距
             self.kh = load_dict["ArmorFind"]["kh"]
         with open('./json/common.json','r',encoding = 'utf-8') as load_f:
@@ -207,9 +208,11 @@ class GetArmor:
                 angle = abs((y0-y1)/(x0-x1))                       #装甲板角度
                 #根据面积选择筛选条件
                 if((s0*l0 + s1*l1) < self.area_limit):
-                    angleDiff = self.angleDiff_near
+                    self.angleDiff = self.angleDiff_near
+                    yixaingangleDiff = self.yixaingangleDiff_near
                 else:
-                    angleDiff = self.angleDiff_far
+                    self.angleDiff = self.angleDiff_far
+                    yixaingangleDiff = self.yixaingangleDiff_far
                 #区分左右装甲板，算出灯板角度
                 if x0 > x1:
                     angle = angle*180/math.pi
@@ -227,6 +230,10 @@ class GetArmor:
                 if angleDiff > self.angleDiff and angleDiff < 180-self.angleDiff:
                     # log.print_debug("angleDiff = "+str(angleDiff))
                     continue      
+                #灯条异向角度差过大不要
+                if angleDiff > 90 and angleDiff < 180 - yixaingangleDiff:
+                    # log.print_debug("angleDiff = "+str(angleDiff))
+                    continue  
                 #灯条面积比太大不要
                 if areaRatio > self.maxareaRatio or areaRatio < self.minareaRatio:
                     # log.print_debug("areaRatio = "+str(areaRatio))
@@ -331,6 +338,8 @@ class GetArmor:
             cv2.createTrackbar('灯条横向最大值0.0', 'armorTest', int(self.xcenterdismax*10), 600, self.nothing)
             cv2.createTrackbar('装甲板高度最小值', 'armorTest', int(self.ylengthmin), 10, self.nothing)
             cv2.createTrackbar('装甲板横纵向比值', 'armorTest', int(self.ylengcenterRatio), 10, self.nothing)
+            cv2.createTrackbar('近处灯条异向角度差', 'armorTest', int(self.yixaingangleDiff_near), 10, self.nothing)
+            cv2.createTrackbar('远处灯条异向角度差', 'armorTest', int(self.yixaingangleDiff_far), 10, self.nothing)
             cv2.createTrackbar('测距参数', 'armorTest', int(self.kh), 40000, self.nothing)
 
 
@@ -373,6 +382,8 @@ class GetArmor:
             self.xcenterdismax = float(cv2.getTrackbarPos('灯条横向最大值0.0', 'armorTest'))/10
             self.ylengthmin = float(cv2.getTrackbarPos('装甲板高度最小值', 'armorTest'))
             self.ylengcenterRatio = float(cv2.getTrackbarPos('装甲板横纵向比值', 'armorTest'))
+            self.yixaingangleDiff_near = float(cv2.createTrackbar('近处灯条异向角度差', 'armorTest'))
+            self.yixaingangleDiff_far = float(cv2.createTrackbar('远处灯条异向角度差', 'armorTest'))
             self.kh = float(cv2.getTrackbarPos('测距参数', 'armorTest'))
 
     
@@ -431,16 +442,18 @@ class GetArmor:
                 load_dict["ArmorFind"]["maxarmorProp"] = self.maxarmorProp
                 load_dict["ArmorFind"]["minBigarmorProp"] = self.minBigarmorProp
                 load_dict["ArmorFind"]["maxBigarmorProp"] = self.maxBigarmorProp
-                load_dict["ArmorFind"]["maxBigarmorProp"] = self.angleDiff_near
-                load_dict["ArmorFind"]["maxBigarmorProp"] = self.angleDiff_far
-                load_dict["ArmorFind"]["maxBigarmorProp"] = self.minareawidthRatio
-                load_dict["ArmorFind"]["maxBigarmorProp"] = self.maxareawidthRatio
-                load_dict["ArmorFind"]["maxBigarmorProp"] = self.minareaRatio
-                load_dict["ArmorFind"]["maxBigarmorProp"] = self.maxareaRatio
-                load_dict["ArmorFind"]["maxBigarmorProp"] = self.area_limit
-                load_dict["ArmorFind"]["maxBigarmorProp"] = self.xcenterdismax
-                load_dict["ArmorFind"]["maxBigarmorProp"] = self.ylengthmin
-                load_dict["ArmorFind"]["maxBigarmorProp"] = self.ylengcenterRatio
+                load_dict["ArmorFind"]["angleDiff_near"] = self.angleDiff_near
+                load_dict["ArmorFind"]["angleDiff_far"] = self.angleDiff_far
+                load_dict["ArmorFind"]["minareawidthRatio"] = self.minareawidthRatio
+                load_dict["ArmorFind"]["maxareawidthRatio"] = self.maxareawidthRatio
+                load_dict["ArmorFind"]["minareaRatio"] = self.minareaRatio
+                load_dict["ArmorFind"]["maxareaRatio"] = self.maxareaRatio
+                load_dict["ArmorFind"]["area_limit"] = self.area_limit
+                load_dict["ArmorFind"]["xcenterdismax"] = self.xcenterdismax
+                load_dict["ArmorFind"]["ylengthmin"] = self.ylengthmin
+                load_dict["ArmorFind"]["ylengcenterRatio"] = self.ylengcenterRatio
+                load_dict["ArmorFind"]["yixaingangleDiff_near"] = self.yixaingangleDiff_near
+                load_dict["ArmorFind"]["yixaingangleDiff_far"] = self.yixaingangleDiff_far
                 load_dict["ArmorFind"]["kh"] = self.kh
                 if self.color == 0:
                     load_dict["ImageProcess_red"]["hsvPara_high"] = [int(x) for x in list(self.hsvPara[1])]
