@@ -187,6 +187,7 @@ class Main:
             cv2.namedWindow('colorTest')
             cv2.namedWindow('energyTest')
             cv2.namedWindow('armorTest')
+            cv2.namedWindow('armorTest2')
             self.GetArmor_class.TrackerBar_create()
             if energy_label:
                 self.GetEnergyMac_class.TrackerBar_create()

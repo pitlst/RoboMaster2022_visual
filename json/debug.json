@@ -21,7 +21,7 @@
       "com_debug_color":0,
       "串口debug模式下的颜色传值":"0为蓝色，1为红色",
   
-      "com_debug_mode":4,
+      "com_debug_mode":0,
       "串口debug模式下的模式传值":"0为自瞄，1,2为深度学习打小幅，4,5为深度学习打大符,3为哨兵模式",
       
       "video_writer":1,

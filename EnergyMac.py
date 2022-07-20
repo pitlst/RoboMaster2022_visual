@@ -85,6 +85,7 @@ class GetEnergyMac:
             self.fan_armor_distence_min = load_dict["EnergyFind"]["fan_armor_distence_min"]
             self.armor_R_distance_max = load_dict["EnergyFind"]["armor_R_distance_max"]
             self.armor_R_distance_min = load_dict["EnergyFind"]["armor_R_distance_min"] 
+            self.GB_size = int(load_dict["EnergyFind"]["GB_size"])
         with open('./json/debug.json','r',encoding = 'utf-8') as load_f:
             load_dict = json.load(load_f,strict=False)
             self.Energy_R_debug = load_dict["Debug"]["Energy_R_debug"]
@@ -427,6 +428,7 @@ class GetEnergyMac:
 
     def HSV_Process(self,frame):
         #图像二值化
+        frame = cv2.GaussianBlur(frame,(self.GB_size,self.GB_size),0)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
         mask = cv2.inRange(frame, self.hsv_low, self.hsv_high)
         
@@ -502,6 +504,8 @@ class GetEnergyMac:
             cv2.createTrackbar('highSat', 'energyTest', self.hsv_high[1], 255, self.nothing)
             cv2.createTrackbar('highVal', 'energyTest', self.hsv_high[2], 255, self.nothing)
 
+            cv2.createTrackbar('GB_size', 'energyTest', self.GB_size, 100, self.nothing)
+
             cv2.createTrackbar('MaxRsS0.0000', 'energyTest', int(self.MaxRsS/self.model_img_size*10000), 10000, self.nothing)
             cv2.createTrackbar('MinRsS0.0000', 'energyTest', int(self.MinRsS/self.model_img_size*10000), 10000, self.nothing)
             cv2.createTrackbar('MaxRsRatio0.000', 'energyTest', int(self.MaxRsRatio/self.model_img_size*1000), 2000, self.nothing)
@@ -522,6 +526,7 @@ class GetEnergyMac:
             highVal = cv2.getTrackbarPos('highVal', 'energyTest')
             self.hsv_high = np.array([highHue,highSat,highVal])
             self.hsv_low = np.array([lowHue,lowSat,lowVal])
+            self.GB_size = int(cv2.getTrackbarPos('GB_size', 'energyTest'))
             self.MaxRsS = float(cv2.getTrackbarPos('MaxRsS0.0000', 'energyTest'))/10000*self.model_img_size
             self.MinRsS = float(cv2.getTrackbarPos('MinRsS0.0000', 'energyTest'))/10000*self.model_img_size
             self.MaxRsRatio = float(cv2.getTrackbarPos('MaxRsRatio0.000', 'energyTest'))/1000*self.model_img_size
@@ -544,6 +549,7 @@ class GetEnergyMac:
                 load_dict["EnergyFind"]["MaxRsS"] = self.MaxRsS/(self.model_img_size**2)
                 load_dict["EnergyFind"]["MinRsS"] = self.MinRsS/(self.model_img_size**2)
                 load_dict["EnergyFind"]["MaxRsRatio"] = self.MaxRsRatio
+                load_dict["EnergyFind"]["GB_size"] = self.GB_size
                 load_dict["EnergyFind"]["fan_armor_distence_max"] = self.fan_armor_distence_max/self.model_img_size
                 load_dict["EnergyFind"]["fan_armor_distence_min"] = self.fan_armor_distence_min/self.model_img_size
                 load_dict["EnergyFind"]["armor_R_distance_max"] = self.armor_R_distance_max/self.model_img_size

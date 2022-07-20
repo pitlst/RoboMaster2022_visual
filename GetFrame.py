@@ -31,6 +31,9 @@ class GetFrame:
             log.print_error('unknow source')
             self.video_debug_set = 0
         self.read_json()
+
+        self.getframe_label = True
+
         #读取校验，isinstance还有范围这些，先不写了，想写的话自行补上
         #这里定义的常值是一些不会经常更改的相机参数
         #具体定义查看在MVS的客户端中，或者翻到SetCamera方法
@@ -522,6 +525,9 @@ class GetFrame:
             self.count += 1
             return frame
         else:
+            #如果上一次没有成功取流，重启相机
+            if not self.getframe_label: 
+                self.restart_camera(self.mode)
             pData = self.pData
             stFrameInfo = MV_FRAME_OUT_INFO_EX()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
             memset(byref(stFrameInfo), 0, sizeof(stFrameInfo))
@@ -529,10 +535,10 @@ class GetFrame:
             ret = self.cam.MV_CC_GetOneFrameTimeout(byref(pData), self.nDataSize, stFrameInfo, 1000)
             if ret != 0:
                 log.print_error("get frame fail! ret[0x%x]" % ret)
-                log.print_info('try reboot camera...')
-                self.restart_camera(self.mode)
+                self.getframe_label = False
             else:
                 temp = temp.reshape((int(self.height),int(self.width)))
+                self.getframe_label = True
             return temp
 
     def EndCamera(self):

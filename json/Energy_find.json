@@ -25,6 +25,7 @@
         "MaxRsS": 0.0003223557692307692,
         "MinRsS": 7.163461538461539e-05,
         "MaxRsRatio": 559.104,
+        "GB_size":13,
         "fan_armor_distence_max": 0.143,
         "fan_armor_distence_min": 0.065,
         "armor_R_distance_max": 0.294,
