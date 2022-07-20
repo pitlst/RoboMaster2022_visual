@@ -3,6 +3,7 @@ import math
 import json
 import copy
 import time
+import warnings
 import numpy as np
 from logger import log
 from openvino.inference_engine import IECore
@@ -148,8 +149,8 @@ class GetEnergyMac:
         else:
             frame_reasize = frame
         #传统视觉识别R 
-        mask = self.HSV_Process(frame_reasize)
-        center_tradition = self.FindRsignScope(mask)
+        mask_gauss, mask = self.HSV_Process_Gauss(frame_reasize)
+        center_tradition = self.FindRsignScope(mask_gauss)
         #深度学习前处理
         frame_deal = frame_reasize.astype('float32')
         frame_deal = frame_deal/255  #像素归一化
@@ -172,15 +173,17 @@ class GetEnergyMac:
             copy_center[1] = float(copy_center[1] + self.center_dis_y)*self.frame_size/self.model_img_size
             #筛选待击打装甲板
             hit_pos = self.energy_filter(center,result)
+            #根据深度学习筛选的装甲板位置截取图像，二次矫正图像中心值
+            hit_pos = self.tradition_filter(hit_pos,mask)
+            #将待击打坐标从模型输入大小转换为实际取流大小
             x = float(hit_pos[0][0])*self.frame_size/self.model_img_size
             y = float(hit_pos[0][1])*self.frame_size/self.model_img_size
-            #根据深度学习筛选的装甲板截取图像，二次矫正图像中心值
-            hit_pos = self.tradition_filter(hit_pos,mask)
+
 
         if self.debug:
             #如果开启了debug模式，向类变量更新值
             self.img4 = frame
-            self.img5 = mask
+            self.img5 = mask_gauss
             self.img = frame_reasize
             self.img2 = frame_reasize
             self.img3 = frame_reasize
@@ -428,11 +431,11 @@ class GetEnergyMac:
 
     def HSV_Process(self,frame):
         #图像二值化
-        frame = cv2.GaussianBlur(frame,(self.GB_size,self.GB_size),0)
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
-        mask = cv2.inRange(frame, self.hsv_low, self.hsv_high)
-        
-        return mask
+        frame_gauss = cv2.GaussianBlur(frame,(self.GB_size,self.GB_size),0)
+        mask_gauss = cv2.inRange(frame_gauss, self.hsv_low, self.hsv_high)
+        mask = cv2.inRange(frame_gauss, self.hsv_low, self.hsv_high)
+        return mask, mask_gauss
 
 
     def FindRsignScope(self,mask):
@@ -443,8 +446,7 @@ class GetEnergyMac:
             contours, hierarchy = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
         else:
             _, contours, hierarchy = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-        contoursLength = len(contours)
-        for c in range(contoursLength):
+        for c in range(len(contours)):
             contoursFine = True
             center, size, angle = cv2.minAreaRect(contours[c])
             #得到长边和中心点垂直短边向量
@@ -466,9 +468,20 @@ class GetEnergyMac:
         return Center_return
     
     def tradition_filter(self,hit_pos,mask):
-        
+        warnings.warn("some_old_function is deprecated", DeprecationWarning)
+        x = hit_pos[0][0]
+        y = hit_pos[0][1]
+        r = self.nms_distence_max
         #矫正装甲板中心值
-
+        process_mask = mask[x-r:x+r,y-r:y+r]
+        #对于opencv3，轮廓寻找函数有3个返回值，对于opencv4只有两个
+        if self.version:
+            contours, hierarchy = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        else:
+            _, contours, hierarchy = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+        for c in range(len(contours)):
+            pass
+        
         return hit_pos
 
 

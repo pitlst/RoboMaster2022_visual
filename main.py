@@ -23,7 +23,7 @@
       \/___/                              \/____/                     \/____/
 
 TOE实验室算法组---打符/自瞄程序
-@作者：苏盲，cheakf
+@作者：苏盲，孙墨明
 '''
 
 import threading
@@ -291,19 +291,25 @@ if __name__ == '__main__':
         import ipdb;ipdb.set_trace()
     #开始截获命令行的终止信号
     signal.signal(signal.SIGINT, quit)
-    # 程序初始化
-    infantry = Main(input)
-    grab_image_thread = threading.Thread(target=infantry.grab_image)
-    post_process_thread = threading.Thread(target=infantry.post_process)
-    debug_show_thread = threading.Thread(target=infantry.debug_show)
-    #设置各个线程为后台线程，保证一次性杀死
-    post_process_thread.daemon = True
-    grab_image_thread.daemon = True
-    debug_show_thread.daemon = True
-    #启动线程
-    post_process_thread.start()
-    grab_image_thread.start()
-    debug_show_thread.start()
-    #运行看门狗
-    watch_dog()
+    try:
+        # 程序初始化
+        infantry = Main(input)
+        grab_image_thread = threading.Thread(target=infantry.grab_image)
+        post_process_thread = threading.Thread(target=infantry.post_process)
+        debug_show_thread = threading.Thread(target=infantry.debug_show)
+        #设置各个线程为后台线程，保证一次性杀死
+        post_process_thread.daemon = True
+        grab_image_thread.daemon = True
+        debug_show_thread.daemon = True
+        #启动线程
+        post_process_thread.start()
+        grab_image_thread.start()
+        debug_show_thread.start()
+        #运行看门狗
+        watch_dog()
+    except Exception as ex:
+        #截获程序的所有报错写道日志中，注意，日志类本身的报错不会写入
+        log.print_critical("出现如下异常\n%s"%ex)
+        raise ValueError("成功退出程序")
+
 

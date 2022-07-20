@@ -27,6 +27,7 @@ class GetArmor:
             self.mask = np.zeros([480,640],dtype=np.uint8)
             self.lightBarList = []
             self.realCenter_list = []
+            self.armorProp = -1
             self.x = -1
             self.y = -1
             self.z = -1
