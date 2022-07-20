@@ -3,9 +3,8 @@ import math
 import json
 import copy
 import time
-import warnings
 import numpy as np
-from logger import log
+from logger import count, log
 from openvino.inference_engine import IECore
 
 class GetEnergyMac:
@@ -51,12 +50,14 @@ class GetEnergyMac:
             self.img4 = np.zeros( [ 480, 640 ], dtype = np.uint8 )
             self.img5 = np.zeros( [ 480, 640 ], dtype = np.uint8 )
             self.img6 = np.zeros( [ 480, 640 ], dtype = np.uint8 )
+            self.img7 = np.zeros( [ 480, 640 ], dtype = np.uint8 )
             self.colors = [[255,255,0],[0,255,0],[0,255,255]]
             self.getvar_label = False
             self.pred = [[]]
             self.center = []
             self.result = []
             self.hit_pos = []
+            self.hit_return = []
             self.x = -1
             self.y = -1
             self.center_tradition = []
@@ -470,7 +471,8 @@ class GetEnergyMac:
         return Center_return
     
     def tradition_filter(self,hit_pos,mask):
-        warnings.warn("some_old_function is deprecated", DeprecationWarning)
+        
+        hit_return = []
         x = hit_pos[0][0]
         y = hit_pos[0][1]
         r = self.nms_distence_max
@@ -478,12 +480,32 @@ class GetEnergyMac:
         process_mask = mask[x-r:x+r,y-r:y+r]
         #对于opencv3，轮廓寻找函数有3个返回值，对于opencv4只有两个
         if self.version:
-            contours, hierarchy = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            contours, hierarchy = cv2.findContours(process_mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1)
         else:
-            _, contours, hierarchy = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+            _, contours, hierarchy = cv2.findContours(process_mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1)
         for c in range(len(contours)):
-            pass
-        
+            if len(contours[c]) >= 10:
+                center, size, angle = cv2.minAreaRect(contours[c])
+                contoursFine = True
+                #得到长边和中心点垂直短边向量
+                if size[0]<size[1]:
+                    longSide = size[1]
+                    shortSide = size[0]
+                else:
+                    longSide = size[0]
+                    shortSide = size[1]
+                if longSide*shortSide > self.MaxRsS:
+                    contoursFine = False
+                if longSide*shortSide < self.MinRsS:
+                    contoursFine = False
+                if longSide > self.MaxRsRatio*shortSide:
+                    contoursFine = False
+                if contoursFine:
+                    hit_return.append([center[0],center[1],longSide,shortSide,angle])
+        if self.debug:
+            self.img7 = process_mask
+            self.hit_return = hit_return
+            log.print_debug(hit_return)
         return hit_pos
 
 
@@ -589,6 +611,7 @@ class GetEnergyMac:
         result = copy.deepcopy(self.result)
         hit_pos = copy.deepcopy(self.hit_pos)
         center_tradition = copy.deepcopy(self.center_tradition)
+        hit_return = copy.deepcopy(self.hit_return)
         x,y = copy.deepcopy(self.x), copy.deepcopy(self.y)
         img = self.draw_pred(copy.deepcopy(self.img),pred,center)
         img = self.draw_center(img,center)
@@ -598,6 +621,7 @@ class GetEnergyMac:
         img4 = copy.deepcopy(self.img4)
         img5 = copy.deepcopy(self.img5)
         img6 = copy.deepcopy(self.img6)
+        img7 = copy.deepcopy(self.img7)
         if len(hit_pos):
             cv2.circle(img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_max),self.colors[2],1)
             cv2.circle(img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_min),self.colors[2],1)
@@ -609,7 +633,30 @@ class GetEnergyMac:
             cv2.circle(img4,(int(x),int(y)),4,(255,255,255),-1)
         for c_t in center_tradition:
             cv2.circle(img3,(int(c_t[0]),int(c_t[1])),8,(255,255,255),-1)
-        return img, img2, img3, img4, img5, img6
+        for h_t in hit_return:
+            x = h_t[0]
+            y = h_t[1]
+            w = h_t[2]
+            h = h_t[3]
+            angle = h_t[4]*180/math.pi
+            box = []
+            x0 = x - h/2*math.cos(angle) + w/2*math.sin(angle)
+            y0 = y - h/2*math.sin(angle) - w/2*math.cos(angle)
+            box.append([x0,y0])
+            x1 = x - h/2*math.cos(angle) - w/2*math.sin(angle)
+            y1 = y - h/2*math.sin(angle) + w/2*math.cos(angle)
+            box.append([x1,y1])
+            x2 = x + h/2*math.cos(angle) - w/2*math.sin(angle)
+            y2 = y + h/2*math.sin(angle) + w/2*math.cos(angle)
+            box.append([x2,y2])
+            x3 = x + h/2*math.cos(angle) + w/2*math.sin(angle)
+            y3 = y + h/2*math.sin(angle) - w/2*math.cos(angle)
+            box.append([x3,y3])
+            box = np.array(box,dtype = 'int32')          
+            cv2.drawContours(img7,[box],0,(0,255,0),1)
+
+
+        return img, img2, img3, img4, img5, img6, img7
     
 
     @staticmethod
