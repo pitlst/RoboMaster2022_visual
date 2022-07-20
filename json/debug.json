@@ -18,7 +18,7 @@
       "timeout":1,
       "每一帧在debug模式时的延时":"0为暂停，即无限大延时，",
   
-      "com_debug_color":0,
+      "com_debug_color":1,
       "串口debug模式下的颜色传值":"0为蓝色，1为红色",
   
       "com_debug_mode":4,

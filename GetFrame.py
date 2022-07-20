@@ -508,8 +508,8 @@ class GetFrame:
                 self.EndCamera()
                 sys.exit()
 
-            data_buf = (c_ubyte * nPayloadSize)()
-            pData,nDataSize = data_buf, nPayloadSize
+            self.data_buf = (c_ubyte * nPayloadSize)()
+            pData,nDataSize = self.data_buf, nPayloadSize
             self.pData = pData
             self.nDataSize = nDataSize
 
@@ -537,8 +537,8 @@ class GetFrame:
                 log.print_error("get frame fail! ret[0x%x]" % ret)
                 self.getframe_label = False
             else:
-                temp = temp.reshape((int(self.height),int(self.width)))
                 self.getframe_label = True
+            temp = temp.reshape((int(self.height),int(self.width)))
             return temp
 
     def EndCamera(self):
@@ -551,21 +551,21 @@ class GetFrame:
             ret = self.cam.MV_CC_StopGrabbing()
             if ret != 0:
                 log.print_error("stop grabbing fail! ret[0x%x]" % ret)
-                del data_buf
+                del self.data_buf
                 sys.exit()
 
             # ch:关闭设备 | Close device
             ret = self.cam.MV_CC_CloseDevice()
             if ret != 0:
                 log.print_error("close deivce fail! ret[0x%x]" % ret)
-                del data_buf
+                del self.data_buf
                 sys.exit()
 
             # ch:销毁句柄 | Destroy handle
             ret = self.cam.MV_CC_DestroyHandle()
             if ret != 0:
                 log.print_error("destroy handle fail! ret[0x%x]" % ret)
-                del data_buf
+                del self.data_buf
                 sys.exit()
 
 '''

@@ -50,6 +50,7 @@ class GetEnergyMac:
             self.img3 = np.zeros( [ 480, 640 ], dtype = np.uint8 )
             self.img4 = np.zeros( [ 480, 640 ], dtype = np.uint8 )
             self.img5 = np.zeros( [ 480, 640 ], dtype = np.uint8 )
+            self.img6 = np.zeros( [ 480, 640 ], dtype = np.uint8 )
             self.colors = [[255,255,0],[0,255,0],[0,255,255]]
             self.getvar_label = False
             self.pred = [[]]
@@ -149,7 +150,7 @@ class GetEnergyMac:
         else:
             frame_reasize = frame
         #传统视觉识别R 
-        mask_gauss, mask = self.HSV_Process_Gauss(frame_reasize)
+        mask_gauss, mask = self.HSV_Process(frame_reasize)
         center_tradition = self.FindRsignScope(mask_gauss)
         #深度学习前处理
         frame_deal = frame_reasize.astype('float32')
@@ -174,7 +175,7 @@ class GetEnergyMac:
             #筛选待击打装甲板
             hit_pos = self.energy_filter(center,result)
             #根据深度学习筛选的装甲板位置截取图像，二次矫正图像中心值
-            hit_pos = self.tradition_filter(hit_pos,mask)
+            #hit_pos = self.tradition_filter(hit_pos,mask)
             #将待击打坐标从模型输入大小转换为实际取流大小
             x = float(hit_pos[0][0])*self.frame_size/self.model_img_size
             y = float(hit_pos[0][1])*self.frame_size/self.model_img_size
@@ -184,6 +185,7 @@ class GetEnergyMac:
             #如果开启了debug模式，向类变量更新值
             self.img4 = frame
             self.img5 = mask_gauss
+            self.img6 = mask
             self.img = frame_reasize
             self.img2 = frame_reasize
             self.img3 = frame_reasize
@@ -434,7 +436,7 @@ class GetEnergyMac:
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
         frame_gauss = cv2.GaussianBlur(frame,(self.GB_size,self.GB_size),0)
         mask_gauss = cv2.inRange(frame_gauss, self.hsv_low, self.hsv_high)
-        mask = cv2.inRange(frame_gauss, self.hsv_low, self.hsv_high)
+        mask = cv2.inRange(frame, self.hsv_low, self.hsv_high)
         return mask, mask_gauss
 
 
@@ -539,7 +541,7 @@ class GetEnergyMac:
             highVal = cv2.getTrackbarPos('highVal', 'energyTest')
             self.hsv_high = np.array([highHue,highSat,highVal])
             self.hsv_low = np.array([lowHue,lowSat,lowVal])
-            self.GB_size = int(cv2.getTrackbarPos('GB_size', 'energyTest'))
+            #self.GB_size = int(cv2.getTrackbarPos('GB_size', 'energyTest'))
             self.MaxRsS = float(cv2.getTrackbarPos('MaxRsS0.0000', 'energyTest'))/10000*self.model_img_size
             self.MinRsS = float(cv2.getTrackbarPos('MinRsS0.0000', 'energyTest'))/10000*self.model_img_size
             self.MaxRsRatio = float(cv2.getTrackbarPos('MaxRsRatio0.000', 'energyTest'))/1000*self.model_img_size
@@ -595,6 +597,7 @@ class GetEnergyMac:
         img3 = copy.deepcopy(self.img3)
         img4 = copy.deepcopy(self.img4)
         img5 = copy.deepcopy(self.img5)
+        img6 = copy.deepcopy(self.img6)
         if len(hit_pos):
             cv2.circle(img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_max),self.colors[2],1)
             cv2.circle(img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_min),self.colors[2],1)
@@ -606,7 +609,7 @@ class GetEnergyMac:
             cv2.circle(img4,(int(x),int(y)),4,(255,255,255),-1)
         for c_t in center_tradition:
             cv2.circle(img3,(int(c_t[0]),int(c_t[1])),8,(255,255,255),-1)
-        return img, img2, img3, img4, img5
+        return img, img2, img3, img4, img5, img6
     
 
     @staticmethod

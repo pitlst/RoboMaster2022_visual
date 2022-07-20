@@ -21,19 +21,19 @@
 
   "Energy_mac":
   {
-    "width":768,
+    "width":1072,
     "图像宽度":"",
 
-    "height":768,
+    "height":1072,
     "图像高度":"",
 
     "exposure_time":4000,
     "曝光":"",
 
-    "offsetX":336,
+    "offsetX":184,
     "水平偏移":"",
 
-    "offsetY":300,
+    "offsetY":4,
     "垂直偏移":""
 
   },
