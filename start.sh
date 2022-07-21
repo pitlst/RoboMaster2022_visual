@@ -6,4 +6,6 @@ cd /home/cheakf/RoboMaster2022_visual_program
 while true
 do
     python3 main.py 
+    pid=$(ps x | grep "main.py" | grep 'python' | grep -v grep | awk '{print $1}')
+    echo pid
 done

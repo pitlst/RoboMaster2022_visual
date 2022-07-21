@@ -151,7 +151,7 @@ class GetEnergyMac:
         else:
             frame_reasize = frame
         #传统视觉识别R 
-        mask_gauss, mask = self.HSV_Process(frame_reasize)
+        mask,mask_gauss = self.HSV_Process(frame_reasize)
         center_tradition = self.FindRsignScope(mask_gauss)
         #深度学习前处理
         frame_deal = frame_reasize.astype('float32')
@@ -176,7 +176,7 @@ class GetEnergyMac:
             #筛选待击打装甲板
             hit_pos = self.energy_filter(center,result)
             #根据深度学习筛选的装甲板位置截取图像，二次矫正图像中心值
-            #hit_pos = self.tradition_filter(hit_pos,mask)
+            hit_pos = self.tradition_filter(hit_pos,mask)
             #将待击打坐标从模型输入大小转换为实际取流大小
             x = float(hit_pos[0][0])*self.frame_size/self.model_img_size
             y = float(hit_pos[0][1])*self.frame_size/self.model_img_size
@@ -471,41 +471,33 @@ class GetEnergyMac:
         return Center_return
     
     def tradition_filter(self,hit_pos,mask):
-        
+        #传统视觉矫正装甲板
         hit_return = []
         x = hit_pos[0][0]
         y = hit_pos[0][1]
         r = self.nms_distence_max
-        #矫正装甲板中心值
-        process_mask = mask[x-r:x+r,y-r:y+r]
-        #对于opencv3，轮廓寻找函数有3个返回值，对于opencv4只有两个
-        if self.version:
-            contours, hierarchy = cv2.findContours(process_mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1)
-        else:
-            _, contours, hierarchy = cv2.findContours(process_mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_L1)
-        for c in range(len(contours)):
-            if len(contours[c]) >= 10:
-                center, size, angle = cv2.minAreaRect(contours[c])
-                contoursFine = True
-                #得到长边和中心点垂直短边向量
-                if size[0]<size[1]:
-                    longSide = size[1]
-                    shortSide = size[0]
-                else:
-                    longSide = size[0]
-                    shortSide = size[1]
-                if longSide*shortSide > self.MaxRsS:
-                    contoursFine = False
-                if longSide*shortSide < self.MinRsS:
-                    contoursFine = False
-                if longSide > self.MaxRsRatio*shortSide:
-                    contoursFine = False
-                if contoursFine:
-                    hit_return.append([center[0],center[1],longSide,shortSide,angle])
-        if self.debug:
-            self.img7 = process_mask
-            self.hit_return = hit_return
-            log.print_debug(hit_return)
+        if x > 0 and y > 0:
+            x0 = int(x-r) if (x-r) > 0 else 0
+            y0 = int(y-r) if (y-r) > 0 else 0
+            x1 = int(x + r)
+            y1 = int(y + r)
+            cnt = []
+            #矫正装甲板中心值
+            process_mask = mask[y0:y1,x0:x1]
+            #对于opencv3，轮廓寻找函数有3个返回值，对于opencv4只有两个
+            if self.version:
+                contours, hierarchy = cv2.findContours(process_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_L1)
+            else:
+                _, contours, hierarchy = cv2.findContours(process_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_L1)
+            #筛选内轮廓
+            hierarchy_temp = [hierarchy[0][i] for i in range(len(hierarchy[0]))]
+            for h,h_t in enumerate(hierarchy_temp):
+                if h_t[3] == -1:
+                    cnt.append(contours[h])
+            
+            if self.debug:
+                self.img7 = process_mask
+                self.hit_return = hit_return
         return hit_pos
 
 
@@ -633,28 +625,6 @@ class GetEnergyMac:
             cv2.circle(img4,(int(x),int(y)),4,(255,255,255),-1)
         for c_t in center_tradition:
             cv2.circle(img3,(int(c_t[0]),int(c_t[1])),8,(255,255,255),-1)
-        for h_t in hit_return:
-            x = h_t[0]
-            y = h_t[1]
-            w = h_t[2]
-            h = h_t[3]
-            angle = h_t[4]*180/math.pi
-            box = []
-            x0 = x - h/2*math.cos(angle) + w/2*math.sin(angle)
-            y0 = y - h/2*math.sin(angle) - w/2*math.cos(angle)
-            box.append([x0,y0])
-            x1 = x - h/2*math.cos(angle) - w/2*math.sin(angle)
-            y1 = y - h/2*math.sin(angle) + w/2*math.cos(angle)
-            box.append([x1,y1])
-            x2 = x + h/2*math.cos(angle) - w/2*math.sin(angle)
-            y2 = y + h/2*math.sin(angle) + w/2*math.cos(angle)
-            box.append([x2,y2])
-            x3 = x + h/2*math.cos(angle) + w/2*math.sin(angle)
-            y3 = y + h/2*math.sin(angle) - w/2*math.cos(angle)
-            box.append([x3,y3])
-            box = np.array(box,dtype = 'int32')          
-            cv2.drawContours(img7,[box],0,(0,255,0),1)
-
 
         return img, img2, img3, img4, img5, img6, img7
     

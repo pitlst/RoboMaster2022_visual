@@ -64,8 +64,10 @@ except Exception as e:
 
 
 
-#该变量为退出线程的标志位
+#该变量为退出线程开始的标志位
 break_label = False
+#该变量为退出线程结束的标志位
+break_end_label = False
 #该变量为重置模式的标志位
 reset_label = None
 
@@ -128,7 +130,7 @@ class Main:
                     temp_num = 0
                     video_writer.write(frame,fram_time)
             #根据帧率判断线程是否处于正常状态，不正常引发报错退出
-            if fps > 1000:
+            if fps > 1000 or fps < 10:
                 raise ValueError("error：图像获取线程帧数异常")
             #每隔一秒输出一次帧率
             if time.time()-t0 > 1:
@@ -246,11 +248,13 @@ class Main:
 #定义线程退出回调函数
 def quit(signum, frame):
     global break_label
+    global break_end_label
     log.print_info('get return sigh')
-    break_label = True
-    stop_thread(post_process_thread)
-    stop_thread(grab_image_thread)
-    stop_thread(debug_show_thread)
+    #判断线程是否被初始化
+    if 'post_process_thread' in locals().keys() and 'post_process_thread' in locals().keys():
+        break_label = True
+    else:
+        break_end_label = True
 
 #通过手动引起异常终止线程
 def stop_thread(th):
@@ -258,22 +262,24 @@ def stop_thread(th):
     th_id = ctypes.c_long(th_id)
     res = ctypes.pythonapi.PyThreadState_SetAsyncExc(th_id, ctypes.py_object(SystemExit))
     if res == 0:
-        raise ValueError("成功退出程序 序号："+str(th.ident))
+        raise ValueError("成功退出线程 序号："+str(th.ident))
     elif res != 1:
         ctypes.pythonapi.PyThreadState_SetAsyncExc(th_id, None)
         raise SystemError("PyThreadState_SetAsyncExc failed")
 
 #定义一个看门狗，程序非正常运行直接杀死线程，shell脚本会重新运行程序
 def watch_dog():
+    global break_end_label
     while True:
         if post_process_thread.is_alive() and grab_image_thread.is_alive() and not break_label:
-            time.sleep(5)
+            time.sleep(3)
             log.print_info('watchdog alive')
         else:
             log.print_error('watchdog died')
             stop_thread(post_process_thread)
             stop_thread(grab_image_thread)
             stop_thread(debug_show_thread)
+            break_end_label = True
 
 
 #程序从这里开始
@@ -310,6 +316,10 @@ if __name__ == '__main__':
     except Exception as ex:
         #截获程序的所有报错写道日志中，注意，日志类本身的报错不会写入
         log.print_critical("出现如下异常\n%s"%ex)
-        raise ValueError("成功退出程序")
+    while 1:
+        #死循环等待线程结束
+        if break_end_label:
+            break
+    raise ValueError("成功退出程序")
 
 
