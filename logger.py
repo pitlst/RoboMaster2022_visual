@@ -3,49 +3,7 @@ import time
 import json
 import os
 import logging
-import inspect
-import collections
-import functools
 import numpy as np
-
-
-# 通用函数参数检查装饰器，需要配合函数注解表达式（Function Annotations）使用
-# 注意本装饰器不能在log类中和他的继承使用
-def para_check(func):
-    msg = 'Argument {argument} must be {expected!r},but got {got!r},value {value!r}'
-    # 获取函数定义的参数
-    sig = inspect.signature(func)
-    parameters = sig.parameters  # 参数有序字典
-    arg_keys = tuple(parameters.keys())  # 参数名称
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        CheckItem = collections.namedtuple('CheckItem', ('anno', 'arg_name', 'value'))
-        check_list = []
-        #*args 传入的参数以及对应的函数参数注解
-        for i, value in enumerate(args):
-            arg_name = arg_keys[i]
-            anno = parameters[arg_name].annotation
-            #类本身的传参在函数中不做检查
-            if arg_name != 'self':
-                check_list.append(CheckItem(anno, arg_name, value))
-        #**kwargs 传入的参数以及对应的函数参数注解
-        for arg_name, value in kwargs.items():
-            anno = parameters[arg_name].annotation
-            check_list.append(CheckItem(anno, arg_name, value))
-        #检查类型并生成错误信息
-        label = True
-        for item in check_list:
-            if not isinstance(item.value, item.anno):
-                error = msg.format(expected=item.anno, argument=item.arg_name,
-                                   got=type(item.value), value=item.value)
-                log.print_info(error)
-                label = False
-        if label:
-            #参数正常执行函数
-            return func(*args, **kwargs)
-
-    return wrapper
-
 
 #定义一个装饰器，用于保证函数调用次数
 def count(func):
@@ -144,19 +102,19 @@ class MyVideoWriter:
             load_dict = json.load(load_f,strict=False)
             self.video_fps = int(load_dict["Debug"]["video_fps"])
 
-    #@para_check
-    def write(self,frame:np.ndarray,time:float)-> None:
-        if frame.shape[-1] != 3:
-            frame = frame = cv2.cvtColor(frame, cv2.COLOR_BayerRG2RGB)
-        if self.mode:
-            self.video_writer_energy.write(frame)
-            self.file_energy.write(str(time)+'\n')
-        else:
-            self.video_writer_aimbot.write(frame)
-            self.file_aimbot.write(str(time)+'\n')
+    def write(self,frame,time):
+        if isinstance(frame,np.ndarray):
+            if frame.shape[-1] != 3:
+                frame = frame = cv2.cvtColor(frame, cv2.COLOR_BayerRG2RGB)
+            if self.mode:
+                self.video_writer_energy.write(frame)
+                self.file_energy.write(str(time)+'\n')
+            else:
+                self.video_writer_aimbot.write(frame)
+                self.file_aimbot.write(str(time)+'\n')
+                
     
-    #@para_check
-    def set_mode(self,mode:int)-> None:
+    def set_mode(self,mode):
         if mode in [1,2,4,5]:
             self.mode = 1
         else:

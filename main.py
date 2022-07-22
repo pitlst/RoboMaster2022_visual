@@ -247,6 +247,7 @@ class Main:
 def quit(signum, frame):
     global break_label
     log.print_info('get return sigh')
+    video_writer.release()
     break_label = True
 
 #通过手动引起异常终止线程
@@ -268,6 +269,7 @@ def watch_dog():
             log.print_info('watchdog alive')
         else:
             log.print_error('watchdog died')
+            video_writer.release()
             stop_thread(post_process_thread)
             stop_thread(grab_image_thread)
             stop_thread(debug_show_thread)
