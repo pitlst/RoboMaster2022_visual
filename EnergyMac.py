@@ -175,8 +175,8 @@ class GetEnergyMac:
             copy_center[1] = float(copy_center[1] + self.center_dis_y)*self.frame_size/self.model_img_size
             #筛选待击打装甲板
             hit_pos = self.energy_filter(center,result)
-            #根据深度学习筛选的装甲板位置截取图像，二次矫正图像中心值
-            hit_pos = self.tradition_filter(hit_pos,mask)
+            #根据深度学习筛选的装甲板位置截取图像，二次矫正图像中心值,未开发完全，影响帧率
+            #hit_pos = self.tradition_filter(hit_pos,mask)
             #将待击打坐标从模型输入大小转换为实际取流大小
             x = float(hit_pos[0][0])*self.frame_size/self.model_img_size
             y = float(hit_pos[0][1])*self.frame_size/self.model_img_size

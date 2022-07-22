@@ -5,6 +5,23 @@ import os
 import logging
 import numpy as np
 
+#用于c++同学复健
+endl = '\n'
+
+class cpp:
+    def __lshift__(self,other):
+        '''
+        重载左移运算符,用于c++转python的适应期(笑
+        示例写法：
+        cout << 111 <<< endl
+        输出：
+        111
+        '''
+        print(other,end='')
+        return self
+
+#用于比赛
+
 #定义一个装饰器，用于保证函数调用次数
 def count(func):
     num = 0  # 初始化次数
@@ -112,7 +129,7 @@ class MyVideoWriter:
             else:
                 self.video_writer_aimbot.write(frame)
                 self.file_aimbot.write(str(time)+'\n')
-                
+
     
     def set_mode(self,mode):
         if mode in [1,2,4,5]:
@@ -128,4 +145,5 @@ class MyVideoWriter:
 if __name__ == 'logger':
     log = MyLogging()
     video_writer = MyVideoWriter()
+    cout = cpp()
 

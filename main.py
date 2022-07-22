@@ -41,7 +41,7 @@ import ctypes
 import traceback
 from Communication import MySerial
 from Aimbot import GetArmor
-from logger import log, video_writer
+from logger import log, video_writer, cout, endl
 #根据平台调用不同的图像获取类，注意，win平台无法调取海康相机
 if sys.platform.startswith('win'):
     log.print_info('run computer is wim and can not open HIVISION')
@@ -287,9 +287,11 @@ if __name__ == '__main__':
     log.set_level(input.debug)
     #若开启断点调试，导入库并初始化
     if input.breakpoint:
-        import ipdb;ipdb.set_trace()
+        import ipdb
+        ipdb.set_trace()
     #开始截获命令行的终止信号
     signal.signal(signal.SIGINT, quit)
+    cout << '程序开始执行' << endl
     try:
         # 程序初始化
         infantry = Main(input)
