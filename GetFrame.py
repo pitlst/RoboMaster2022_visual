@@ -33,7 +33,6 @@ class GetFrame:
         self.read_json()
 
         self.getframe_label = True
-        self.stopframe_label = True
 
         #读取校验，isinstance还有范围这些，先不写了，想写的话自行补上
         #这里定义的常值是一些不会经常更改的相机参数
@@ -517,7 +516,6 @@ class GetFrame:
 
     def GetOneFrame(self):
         #获取单帧图像，根据debug参数来确定图像获取来源
-        self.stopframe_label = False
         if self.video_debug_set == 1:
             _ , frame = self.cap.read()
             return frame
@@ -541,7 +539,6 @@ class GetFrame:
             else:
                 self.getframe_label = True
             temp = temp.reshape((int(self.height),int(self.width)))
-            self.stopframe_label = True
             return temp
 
     def EndCamera(self):
@@ -550,9 +547,6 @@ class GetFrame:
         elif self.video_debug_set == 2:
             self.count = None
         else:
-            while 1:
-                if self.stopframe_label:
-                    break
             # ch:停止取流 | en:Stop grab image
             ret = self.cam.MV_CC_StopGrabbing()
             if ret != 0:

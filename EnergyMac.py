@@ -481,7 +481,6 @@ class GetEnergyMac:
             y0 = int(y-r) if (y-r) > 0 else 0
             x1 = int(x + r)
             y1 = int(y + r)
-            cnt = []
             #矫正装甲板中心值
             process_mask = mask[y0:y1,x0:x1]
             #对于opencv3，轮廓寻找函数有3个返回值，对于opencv4只有两个
@@ -489,12 +488,22 @@ class GetEnergyMac:
                 contours, hierarchy = cv2.findContours(process_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_L1)
             else:
                 _, contours, hierarchy = cv2.findContours(process_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_L1)
-            #筛选内轮廓
-            hierarchy_temp = [hierarchy[0][i] for i in range(len(hierarchy[0]))]
-            for h,h_t in enumerate(hierarchy_temp):
-                if h_t[3] == -1:
-                    cnt.append(contours[h])
-            
+            for h in range(len(contours)):
+                if len(contours[h]) >= 5:
+                    center, size, angle = cv2.fitEllipse(contours[h])
+                    if size[1] <= 0 or size[0] <= 0 or np.isnan(size[0]) or np.isnan(size[1]) :
+                        continue
+                    rectProp = size[1]/size[0]
+                    rectArea = size[0]*size[1]
+                    if rectArea < 800:
+                        continue
+                    if rectProp < 1 or rectProp > 2.5:
+                        continue
+                    hit_return.append(contours[h])
+
+
+
+            process_mask.astype(np.uint8)
             if self.debug:
                 self.img7 = process_mask
                 self.hit_return = hit_return
@@ -614,6 +623,7 @@ class GetEnergyMac:
         img5 = copy.deepcopy(self.img5)
         img6 = copy.deepcopy(self.img6)
         img7 = copy.deepcopy(self.img7)
+        img7 = cv2.cvtColor(img7,cv2.COLOR_GRAY2BGR)
         if len(hit_pos):
             cv2.circle(img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_max),self.colors[2],1)
             cv2.circle(img2,(int(hit_pos[0][0]),int(hit_pos[0][1])),int(self.fan_armor_distence_min),self.colors[2],1)
@@ -625,7 +635,8 @@ class GetEnergyMac:
             cv2.circle(img4,(int(x),int(y)),4,(255,255,255),-1)
         for c_t in center_tradition:
             cv2.circle(img3,(int(c_t[0]),int(c_t[1])),8,(255,255,255),-1)
-
+        for h_t in hit_return:
+            img7 = cv2.drawContours(img7, h_t, -1, (255,0,0), 3) 
         return img, img2, img3, img4, img5, img6, img7
     
 

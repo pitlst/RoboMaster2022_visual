@@ -23,7 +23,7 @@
         "predict_small":36,
         "小符时预测角度参数":"单位是度",
 
-        "predict_big":5,
+        "predict_big":0.8,
         "大符时预测角度参数":"单位是时间s",
 
         "delta_angle_distance":10,

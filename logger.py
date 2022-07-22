@@ -144,7 +144,7 @@ class MyVideoWriter:
             load_dict = json.load(load_f,strict=False)
             self.video_fps = int(load_dict["Debug"]["video_fps"])
 
-    @para_check
+    #@para_check
     def write(self,frame:np.ndarray,time:float)-> None:
         if frame.shape[-1] != 3:
             frame = frame = cv2.cvtColor(frame, cv2.COLOR_BayerRG2RGB)
@@ -155,7 +155,7 @@ class MyVideoWriter:
             self.video_writer_aimbot.write(frame)
             self.file_aimbot.write(str(time)+'\n')
     
-    @para_check
+    #@para_check
     def set_mode(self,mode:int)-> None:
         if mode in [1,2,4,5]:
             self.mode = 1
