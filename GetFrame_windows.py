@@ -3,7 +3,7 @@ import numpy as np
 import json
 import cv2
 import os
-from logger import log
+from utils import log
 
 
 

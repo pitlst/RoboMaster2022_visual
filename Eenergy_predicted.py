@@ -1,7 +1,7 @@
 import numpy as np
 import math
 import json
-from logger import log, count
+from utils import log, count
 
 class AnglePredicted:
     def __init__(self,mode):

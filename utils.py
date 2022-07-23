@@ -142,7 +142,7 @@ class MyVideoWriter:
         self.video_writer_aimbot.release()
 
 #调用本文件时只进行一次初始化，引用时只使用已经实例化的对象
-if __name__ == 'logger':
+if __name__ == 'utils':
     log = MyLogging()
     video_writer = MyVideoWriter()
     cout = cpp()

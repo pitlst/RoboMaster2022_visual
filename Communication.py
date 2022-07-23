@@ -2,7 +2,7 @@ import serial
 import serial.tools.list_ports
 import json
 import time
-from logger import log
+from utils import log
 from struct import *
 
 

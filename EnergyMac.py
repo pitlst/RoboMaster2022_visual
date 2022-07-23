@@ -4,7 +4,7 @@ import json
 import copy
 import time
 import numpy as np
-from logger import count, log
+from utils import count, log
 from openvino.inference_engine import IECore
 
 class GetEnergyMac:

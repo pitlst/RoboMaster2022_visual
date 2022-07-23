@@ -3,7 +3,7 @@ import numpy as np
 import json
 import cv2
 import os
-from logger import log
+from utils import log
 from ctypes import *
 sys.path.append("/opt/MVS/Samples/64/Python/MvImport")
 from MvCameraControl_class import *

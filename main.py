@@ -41,7 +41,7 @@ import ctypes
 import traceback
 from Communication import MySerial
 from Aimbot import GetArmor
-from logger import log, video_writer, cout, endl
+from utils import log, video_writer, cout, endl
 #根据平台调用不同的图像获取类，注意，win平台无法调取海康相机
 if sys.platform.startswith('win'):
     log.print_info('run computer is wim and can not open HIVISION')
