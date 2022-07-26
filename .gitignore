@@ -4,4 +4,7 @@ model/*.onnx
 model/*.mapping
 log/*
 !log/log
+nms_files/build/*
+nms_files/*.so
+nms_files/*.dll
 .gitignore.swp

@@ -4,6 +4,8 @@ import json
 import copy
 import time
 import numpy as np
+#nms模块为cython编译
+from nms_diles.my_nms import my_nms, get_cls
 from utils import count, log
 from openvino.inference_engine import IECore
 
@@ -162,7 +164,7 @@ class GetEnergyMac:
         res = self.exec_net.infer(inputs={self.input_blob: frame_deal})
         #后处理
         pred = self.process(res)
-        center, result = self.my_nms(pred)
+        center, result = my_nms(pred)
         #筛选中心
         center = self.center_filter(center,center_tradition)
         copy_center = copy.deepcopy(center)
@@ -256,47 +258,6 @@ class GetEnergyMac:
             
         pred = np.concatenate(z, 1)
         return pred
-
-    def my_nms(self,p):
-        #因为大符的预测框很难有较大交错，所以直接按类和中心距离nms即可，我们的nms没有iou计算
-        #my_nms既做了nms，也筛出了唯一的中心坐标和待击打坐标
-        #注意，待打击点是会有坐标突变的，但是中心不会，因此，中心坐标如果突变，需要筛去
-        result = []
-        center = []
-        for i in p[0]:
-            cls = self.get_cls(i)
-            if cls == 2:
-                #对中心做nms
-                if len(center) == 0:
-                    center.append(i)
-                else:
-                    add = True
-                    for t,center_t in enumerate(center):
-                        if (i[0]-center_t[0])**2+(i[1]-center_t[1])**2 < self.nms_distence_max**2:
-                            add = False
-                            if center_t[4] < i[4]:
-                                center[t] = i
-                                break
-                    if add:
-                        center.append(i)
-            else:
-                #对armor和full做nms
-                if len(result) == 0:
-                    result.append(i)
-                else:
-                    add = True
-                    for table,j in enumerate(result):
-                        cls_j = self.get_cls(j)
-                        if cls_j == cls:
-                            #nms 非极大值抑制
-                            if (i[0]-j[0])**2+(i[1]-j[1])**2 < self.nms_distence_max**2:
-                                add = False
-                                if j[4] < i[4]:
-                                    result[table] = i
-                                    break
-                    if add:
-                        result.append(i)
-        return center,result
     
 
     def center_filter(self,center,center_tradition):
@@ -402,7 +363,7 @@ class GetEnergyMac:
         #对神经网络输出的目标进行传统上的筛选，减少误识别
         hit_pos = [[-1,-1,-1]]
         for i in result:
-            cls = self.get_cls(i)
+            cls = get_cls(i)
             if cls == 0:
                 #这里是筛选识别的装甲板与旋转中心R的距离
                 if center[0] != -1:
@@ -416,7 +377,7 @@ class GetEnergyMac:
 
                 if pos_true:
                     for j in result:
-                        cls_j = self.get_cls(j)
+                        cls_j = get_cls(j)
                         if cls_j == 1:
                             #筛选扇叶是否击打，判断装甲中心附近是否有完整扇叶中心，给一个像素的欧式距离
                             if (j[0]-i[0])**2+(j[1]-i[1])**2 < self.fan_armor_distence_max**2 and \
@@ -513,20 +474,6 @@ class GetEnergyMac:
     def EuclideanDistance(self,c,c0):
         #计算欧氏距离
         return pow((c[0]-c0[0])**2+(c[1]-c0[1])**2, 0.5)
-    
-    def get_cls(self,det):
-        #该函数用于获取一个框的标签
-        if det[5]>det[6]:
-            if det[5] > det[7]:
-                label = 0
-            else:
-                label = 2
-        else:
-            if det[6] > det[7]:
-                label = 1
-            else:
-                label = 2
-        return label
 
     def TrackerBar_create(self):
         #创建滑动条,并备份参数
