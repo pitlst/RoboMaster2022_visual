@@ -7,7 +7,7 @@
         "center_dis_y":0,
         "实际旋转中心与Ry方向的偏差":"", 
         
-        "model_path":"./model/big_dataset_v2_416.xml",
+        "model_path":"./model/bestyao_13_416.xml",
         "模型文件存放路径":"",
 
         "nms_distence_max":0.06,

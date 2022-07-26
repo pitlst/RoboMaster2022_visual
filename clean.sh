@@ -1,4 +1,4 @@
 #!/bin/bash
-rm -f ./log/*
-rm -f ./nms_files/build/*
+rm -rf ./log/*
+rm -rf ./nms_files/build/*
 touch ./log/log

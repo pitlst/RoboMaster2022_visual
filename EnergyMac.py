@@ -5,7 +5,7 @@ import copy
 import time
 import numpy as np
 #nms模块为cython编译
-from nms_diles.my_nms import my_nms, get_cls
+from nms_files.my_nms import my_nms, get_cls
 from utils import count, log
 from openvino.inference_engine import IECore
 
@@ -164,7 +164,7 @@ class GetEnergyMac:
         res = self.exec_net.infer(inputs={self.input_blob: frame_deal})
         #后处理
         pred = self.process(res)
-        center, result = my_nms(pred)
+        center, result = my_nms(pred,self.nms_distence_max)
         #筛选中心
         center = self.center_filter(center,center_tradition)
         copy_center = copy.deepcopy(center)
@@ -430,45 +430,6 @@ class GetEnergyMac:
                 Center_return.append([center[0],center[1],longSide,shortSide])
 
         return Center_return
-    
-    def tradition_filter(self,hit_pos,mask):
-        #传统视觉矫正装甲板
-        hit_return = []
-        x = hit_pos[0][0]
-        y = hit_pos[0][1]
-        r = self.nms_distence_max
-        if x > 0 and y > 0:
-            x0 = int(x-r) if (x-r) > 0 else 0
-            y0 = int(y-r) if (y-r) > 0 else 0
-            x1 = int(x + r)
-            y1 = int(y + r)
-            #矫正装甲板中心值
-            process_mask = mask[y0:y1,x0:x1]
-            #对于opencv3，轮廓寻找函数有3个返回值，对于opencv4只有两个
-            if self.version:
-                contours, hierarchy = cv2.findContours(process_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_L1)
-            else:
-                _, contours, hierarchy = cv2.findContours(process_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_L1)
-            for h in range(len(contours)):
-                if len(contours[h]) >= 5:
-                    center, size, angle = cv2.fitEllipse(contours[h])
-                    if size[1] <= 0 or size[0] <= 0 or np.isnan(size[0]) or np.isnan(size[1]) :
-                        continue
-                    rectProp = size[1]/size[0]
-                    rectArea = size[0]*size[1]
-                    if rectArea < 800:
-                        continue
-                    if rectProp < 1 or rectProp > 2.5:
-                        continue
-                    hit_return.append(contours[h])
-
-
-
-            process_mask.astype(np.uint8)
-            if self.debug:
-                self.img7 = process_mask
-                self.hit_return = hit_return
-        return hit_pos
 
 
     def EuclideanDistance(self,c,c0):
