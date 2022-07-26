@@ -4,7 +4,7 @@
 
       "大符参数":"",
 
-      "Energy_R_debug":1,
+      "Energy_R_debug":3,
       "大符R的处理方式":"0为深度学习处理，1为传统视觉处理，2为深度学习与传统视觉取交集后取置信度最高，3为深度学习丢失后用传统视觉弥补，",
 
       "predict_debug":1,
@@ -13,18 +13,18 @@
       "detect_auto":0,
       "自动判断旋转方向开关":"",
 
-      "通用参数":"",
+      "通用参数":"",  
 
       "timeout":1,
       "每一帧在debug模式时的延时":"0为暂停，即无限大延时，",
   
-      "com_debug_color":1,
+      "com_debug_color":0,
       "串口debug模式下的颜色传值":"0为蓝色，1为红色",
   
-      "com_debug_mode":4,
+      "com_debug_mode":0,
       "串口debug模式下的模式传值":"0为自瞄，1,2为深度学习打小幅，4,5为深度学习打大符,3为哨兵模式",
       
-      "video_writer":1,
+      "video_writer":0,
       "是否开启录像":"1为是，0为否",
 
       "video_interval_fps":10,

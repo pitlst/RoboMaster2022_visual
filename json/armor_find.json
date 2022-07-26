@@ -1,14 +1,14 @@
 {
     "ImageProcess_blue": {
         "hsvPara_high": [
-            120,
+            15,
             255,
             255
         ],
         "hsvPara_low": [
-            88,
-            170,
-            161
+            0,
+            108,
+            54
         ],
         "GBSet_size": [
             -1,
@@ -38,28 +38,28 @@
         "maxlighterProp": 12.04,
         "minAngleError": 17.0,
         "maxAngleError": 163.0,
-        "minarealongRatio": 0.71,
-        "maxarealongRatio": 1.4,
-        "angleDiff_near": 5.0,
-        "angleDiff_far": 5.0,
+        "minarealongRatio": 0.5,
+        "maxarealongRatio": 2.0,
+        "angleDiff_near": 6.0,
+        "angleDiff_far": 8.0,
         "lightBarAreaDiff": 7484,
         "armorAngleMin": 32.0,
         "minarmorArea": 515,
         "maxarmorArea": 100000,
-        "minarmorProp": 1.12,
-        "maxarmorProp": 2.8,
+        "minarmorProp": 1.1,
+        "maxarmorProp": 2.65,
         "minBigarmorProp": 2.54,
-        "maxBigarmorProp": 5.85,
+        "maxBigarmorProp": 5.44,
         "maxareawidthRatio": 2.86,
-        "minareawidthRatio": 2.86,
-        "minareaRatio": 0.3,
-        "maxareaRatio": 3.3,
-        "area_limit": 500.0,
-        "xcenterdismax": 1.0,
+        "minareawidthRatio": 0.35,
+        "minareaRatio": 0.24,
+        "maxareaRatio": 4.2,
+        "area_limit": 680.0,
+        "xcenterdismax": 15.0,
         "ylengthmin": 10.0,
-        "ylengcenterRatio": 1.0,
-        "yixaingangleDiff_near": 5.0,
-        "yixaingangleDiff_far": 3.0,
-        "kh": 30321.0
+        "ylengcenterRatio": 1.2,
+        "yixaingangleDiff_near": 3.0,
+        "yixaingangleDiff_far": 5.0,
+        "kh": 27844.0
     }
 }

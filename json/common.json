@@ -7,7 +7,7 @@
     "height":864,
     "图像高度":"注意，该值与armor_find.json中[Connect_value][height]相关联，请同时修改",
 
-    "exposure_time":3700,
+    "exposure_time":1300,
     "曝光":"",
 
     "offsetX":0,
@@ -30,7 +30,7 @@
     "exposure_time":4000,
     "曝光":"",
 
-    "offsetX":184,
+    "offsetX":176,
     "水平偏移":"",
 
     "offsetY":4,

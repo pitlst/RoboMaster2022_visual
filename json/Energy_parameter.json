@@ -4,10 +4,10 @@
         "center_dis_x":0,
         "实际旋转中心与Rx方向的偏差":"",
 
-        "center_dis_y":1,
+        "center_dis_y":0,
         "实际旋转中心与Ry方向的偏差":"", 
         
-        "model_path":"./model/bestyao_12_416.xml",
+        "model_path":"./model/big_dataset_v2_416.xml",
         "模型文件存放路径":"",
 
         "nms_distence_max":0.06,
@@ -20,7 +20,7 @@
     "predicted":
     {
 
-        "predict_small":20,
+        "predict_small":28,
         "小符时预测角度参数":"单位是度",
 
         "predict_big":0.4,

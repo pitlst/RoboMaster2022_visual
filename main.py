@@ -293,7 +293,7 @@ if __name__ == '__main__':
         ipdb.set_trace()
     #开始截获命令行的终止信号
     signal.signal(signal.SIGINT, quit)
-    cout << '程序开始执行' << endl
+    cout << '程序开始执行' << endl  #你觉得这句话熟悉么，是不是在哪见过，没错，这是c++的语法
     try:
         # 程序初始化
         infantry = Main(input)

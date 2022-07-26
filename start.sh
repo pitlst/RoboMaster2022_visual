@@ -10,5 +10,6 @@ cd ..
 while true
 do
     python3 main.py 
+    #在程序非正常死亡后保证程序完全杀死
     kill -9 $(ps x | grep "main.py" | grep 'python' | grep -v grep | awk '{print $1}')
 done
