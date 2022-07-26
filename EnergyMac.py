@@ -323,7 +323,7 @@ class GetEnergyMac:
                         if deel_center[4] < temp_j[4]:
                             deel_center = temp_j
                 #根据历史位置判断深度学习的是不是误识别
-                if (deel_center[0]-self.last_center[0])**2+(deel_center[1]-self.last_center[1])**2 < self.nms_distence_max**2:
+                if-1 in self.last_center or (deel_center[0]-self.last_center[0])**2+(deel_center[1]-self.last_center[1])**2 < self.nms_distence_max**2:
                     self.last_center = deel_center
                     Center = deel_center
                     self.pass_number = 0
