@@ -166,8 +166,7 @@ class GetEnergyMac:
         pred = self.process(res)
         center, result = my_nms(pred,self.nms_distence_max)
         #筛选中心
-        center = self.center_filter(center,center_tradition)
-        copy_center = copy.deepcopy(center)
+        copy_center = self.center_filter(center,center_tradition)
         if center[0] == -1 or center[1] == -1:
             x,y = -1,-1
             hit_pos = [[-1,-1]]
@@ -176,7 +175,7 @@ class GetEnergyMac:
             copy_center[0] = float(copy_center[0] + self.center_dis_x)*self.frame_size/self.model_img_size
             copy_center[1] = float(copy_center[1] + self.center_dis_y)*self.frame_size/self.model_img_size
             #筛选待击打装甲板
-            hit_pos = self.energy_filter(center,result)
+            hit_pos = self.energy_filter(copy_center,result)
             #根据深度学习筛选的装甲板位置截取图像，二次矫正图像中心值,未开发完全，影响帧率
             #hit_pos = self.tradition_filter(hit_pos,mask)
             #将待击打坐标从模型输入大小转换为实际取流大小
@@ -430,6 +429,7 @@ class GetEnergyMac:
                 Center_return.append([center[0],center[1],longSide,shortSide])
 
         return Center_return
+
 
 
     def EuclideanDistance(self,c,c0):
