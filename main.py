@@ -42,7 +42,7 @@ import traceback
 from Communication import MySerial
 from Aimbot import GetArmor
 from utils import log, video_writer, cout, endl
-#默认设置输出等级
+#默认设置输出等级为debug
 log.set_level(1)
 #根据平台调用不同的图像获取类，注意，win平台无法调取海康相机
 if sys.platform.startswith('win'):
