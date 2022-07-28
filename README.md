@@ -10,6 +10,8 @@
 
 ## 环境依赖及安装方式
 
+pip3 install -r requirements.txt 
+
 ## 参数文件定义
 
 ## 备注
