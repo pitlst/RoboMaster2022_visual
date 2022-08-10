@@ -436,50 +436,45 @@ class GetEnergyMac:
         #计算欧氏距离
         return pow((c[0]-c0[0])**2+(c[1]-c0[1])**2, 0.5)
 
-    def TrackerBar_create(self):
-        #创建滑动条,并备份参数
+    def TrackerBar_value(self):
+        #返回滑动条的初值
         if self.debug:
             if self.getvar_label == False:
                 self.getvar_label = True
-            # Lower range colour sliders.
-            cv2.createTrackbar('lowHue', 'energyTest', self.hsv_low[0], 255, self.nothing)
-            cv2.createTrackbar('lowSat', 'energyTest', self.hsv_low[1], 255, self.nothing)
-            cv2.createTrackbar('lowVal', 'energyTest', self.hsv_low[2], 255, self.nothing)    
-            # Higher range colour sliders.
-            cv2.createTrackbar('highHue', 'energyTest', self.hsv_high[0], 255, self.nothing)
-            cv2.createTrackbar('highSat', 'energyTest', self.hsv_high[1], 255, self.nothing)
-            cv2.createTrackbar('highVal', 'energyTest', self.hsv_high[2], 255, self.nothing)
-
-            cv2.createTrackbar('GB_size', 'energyTest', self.GB_size, 100, self.nothing)
-
-            cv2.createTrackbar('MaxRsS0.0000', 'energyTest', int(self.MaxRsS/self.model_img_size*10000), 10000, self.nothing)
-            cv2.createTrackbar('MinRsS0.0000', 'energyTest', int(self.MinRsS/self.model_img_size*10000), 10000, self.nothing)
-            cv2.createTrackbar('MaxRsRatio0.000', 'energyTest', int(self.MaxRsRatio/self.model_img_size*1000), 2000, self.nothing)
-            cv2.createTrackbar('fan_armor_distence_max0.000', 'energyTest', int(self.fan_armor_distence_max/self.model_img_size*1000), 500, self.nothing)
-            cv2.createTrackbar('fan_armor_distence_min0.000', 'energyTest', int(self.fan_armor_distence_min/self.model_img_size*1000), 255, self.nothing)
-            cv2.createTrackbar('armor_R_distance_max0.000', 'energyTest', int(self.armor_R_distance_max/self.model_img_size*1000), 1000, self.nothing)
-            cv2.createTrackbar('armor_R_distance_min0.000', 'energyTest', int(self.armor_R_distance_min/self.model_img_size*1000), 500, self.nothing)
+            return \
+            self.hsv_low[0], \
+            self.hsv_low[1], \
+            self.hsv_low[2], \
+            self.hsv_high[0], \
+            self.hsv_high[1], \
+            self.hsv_high[2], \
+            int(self.MaxRsS/self.model_img_size*10000),\
+            int(self.MinRsS/self.model_img_size*10000),\
+            int(self.MaxRsRatio/self.model_img_size*1000),\
+            int(self.fan_armor_distence_max/self.model_img_size*1000),\
+            int(self.fan_armor_distence_min/self.model_img_size*1000),\
+            int(self.armor_R_distance_max/self.model_img_size*1000),\
+            int(self.armor_R_distance_min/self.model_img_size*1000)
 
 
-    def updata_argument(self):
+    def updata_argument(self,temp):
         #根据debug更新参数
         if self.debug and self.getvar_label:
-            lowHue = cv2.getTrackbarPos('lowHue', 'energyTest')
-            lowSat = cv2.getTrackbarPos('lowSat', 'energyTest')
-            lowVal = cv2.getTrackbarPos('lowVal', 'energyTest')
-            highHue = cv2.getTrackbarPos('highHue', 'energyTest')
-            highSat = cv2.getTrackbarPos('highSat', 'energyTest')
-            highVal = cv2.getTrackbarPos('highVal', 'energyTest')
+            lowHue = temp[0]
+            lowSat = temp[1]
+            lowVal = temp[2]
+            highHue = temp[3]
+            highSat = temp[4]
+            highVal = temp[5]
             self.hsv_high = np.array([highHue,highSat,highVal])
             self.hsv_low = np.array([lowHue,lowSat,lowVal])
-            #self.GB_size = int(cv2.getTrackbarPos('GB_size', 'energyTest'))
-            self.MaxRsS = float(cv2.getTrackbarPos('MaxRsS0.0000', 'energyTest'))/10000*self.model_img_size
-            self.MinRsS = float(cv2.getTrackbarPos('MinRsS0.0000', 'energyTest'))/10000*self.model_img_size
-            self.MaxRsRatio = float(cv2.getTrackbarPos('MaxRsRatio0.000', 'energyTest'))/1000*self.model_img_size
-            self.fan_armor_distence_max = float(cv2.getTrackbarPos('fan_armor_distence_max0.000', 'energyTest'))/1000*self.model_img_size
-            self.fan_armor_distence_min = float(cv2.getTrackbarPos('fan_armor_distence_min0.000', 'energyTest'))/1000*self.model_img_size
-            self.armor_R_distance_max = float(cv2.getTrackbarPos('armor_R_distance_max0.000', 'energyTest'))/1000*self.model_img_size
-            self.armor_R_distance_min = float(cv2.getTrackbarPos('armor_R_distance_min0.000', 'energyTest'))/1000*self.model_img_size
+            self.MaxRsS = float(temp[6])/10000*self.model_img_size
+            self.MinRsS = float(temp[7])/10000*self.model_img_size
+            self.MaxRsRatio = float(temp[8])/1000*self.model_img_size
+            self.fan_armor_distence_max = float(temp[9])/1000*self.model_img_size
+            self.fan_armor_distence_min = float(temp[10])/1000*self.model_img_size
+            self.armor_R_distance_max = float(temp[11])/1000*self.model_img_size
+            self.armor_R_distance_min = float(temp[12])/1000*self.model_img_size
 
     def update_json(self):
         #更新json文件中的参数

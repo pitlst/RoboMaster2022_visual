@@ -1,7 +1,3 @@
-import sys
-import qdarkstyle
-import json
-import time
 from PyQt5.QtWidgets import(
     QMainWindow, QSlider,QApplication,QLabel,
     QWidget,QScrollArea,QVBoxLayout,QHBoxLayout,QTabWidget,
@@ -13,141 +9,15 @@ class Opencv_slider(QMainWindow):
     '''
     使用pyqt6创建的滑动条类
     '''
-    def __init__(self,name,mode,color):
+    def __init__(self,name):
         super().__init__() 
         self.change_label = 0                  #初始化相关变量
         self.sld = []
-        self.mode = mode
-        self.color = color
         self.showMaximized()                   #设置窗口全屏显示
         self.setWindowTitle(name)              #设置窗口的标题
         self.setStyleSheet("QLabel{font-size:18px;}")      #设置字体大小
-        self.read_json()                       #读取json文件获取参数
         self.init_ui()                         #初始化ui
         self.slider_create()                   #创建滑动条
-    
-
-    def init_ui(self):
-        '''
-        初始化ui,实例化需要的控件并且建立关系
-        '''
-        self.centralWidget = QWidget(self)
-        self.centralWidget.setObjectName("centralWidget")
-        desktop = QApplication.desktop()
-        self.desktop_size = QSize(int(desktop.width()),int(desktop.height()*0.9))
-        self.horizontalLayout = QHBoxLayout(self.centralWidget)
-        self.horizontalLayout.setObjectName("horizontalLayout")
- 
-        self.tabWidget = QTabWidget(self.centralWidget)
-        self.tabWidget.setEnabled(True)
-        self.tabWidget.setMinimumSize(self.desktop_size)
-        self.tabWidget.setObjectName("tabWidget")
-        self.tabWidget.setCurrentIndex(0)
- 
-        self.tab_1 = QWidget()
-        self.tab_1.setObjectName("tab_1")
-        self.tab_2 = QWidget()
-        self.tab_2.setObjectName("tab_2")
-        self.tab_3 = QWidget()
-        self.tab_3.setObjectName("tab_3")
-        self.tab_4 = QWidget()
-        self.tab_4.setObjectName("tab_4")
-
-        self.tabWidget.addTab(self.tab_1, "hsv调参")
-        self.tabWidget.addTab(self.tab_2, "能量机关筛选参数")
-        self.tabWidget.addTab(self.tab_3, "灯条筛选参数")
-        self.tabWidget.addTab(self.tab_4, "装甲板筛选参数")
- 
-        self.weight_sa_1 = self.widget_contents_create(self.tab_1)
-        self.weight_sa_2 = self.widget_contents_create(self.tab_2)
-        self.weight_sa_3 = self.widget_contents_create(self.tab_3)
-        self.weight_sa_4 = self.widget_contents_create(self.tab_4)
-        self.change_label = 1
-
-        self.setCentralWidget(self.centralWidget)
-        
-
-    def read_json(self):
-        '''
-        读取json文件获取滑动条初值和个数
-        '''
-        if self.mode == 3:
-            path = './json/sentry_find.json'
-        else:
-            path = './json/armor_find.json'
-        with open(path,'r',encoding = 'utf-8') as load_f:
-            load_dict = json.load(load_f,strict=False)
-            if self.color == 0:
-                armor_hsv_high = load_dict["ImageProcess_red"]["hsvPara_high"]
-                armor_hsv_low = load_dict["ImageProcess_red"]["hsvPara_low"]
-            elif self.color == 1:
-                armor_hsv_high = load_dict["ImageProcess_red"]["hsvPara_high"]
-                armor_hsv_low = load_dict["ImageProcess_red"]["hsvPara_low"]
-            else:
-                armor_hsv_high = [0,0,0]
-                armor_hsv_low = [0,0,0]
-            self.armor_h_high = armor_hsv_high[0]
-            self.armor_s_high = armor_hsv_high[1]
-            self.armor_v_high = armor_hsv_high[2]
-            self.armor_h_low = armor_hsv_low[0]
-            self.armor_s_low = armor_hsv_low[1]
-            self.armor_v_low = armor_hsv_low[2]
-            #灯条筛选
-            self.minlighterarea = load_dict["ArmorFind"]["minlighterarea"]
-            self.maxlighterarea = load_dict["ArmorFind"]["maxlighterarea"]
-            self.minlighterProp = load_dict["ArmorFind"]["minlighterProp"]
-            self.maxlighterProp = load_dict["ArmorFind"]["maxlighterProp"]
-            self.minAngleError = load_dict["ArmorFind"]["minAngleError"]
-            self.maxAngleError = load_dict["ArmorFind"]["maxAngleError"]
-            #装甲板筛选
-            self.minarealongRatio = load_dict["ArmorFind"]["minarealongRatio"]
-            self.maxarealongRatio = load_dict["ArmorFind"]["maxarealongRatio"]
-            self.lightBarAreaDiff = load_dict["ArmorFind"]["lightBarAreaDiff"]
-            self.armorAngleMin = load_dict["ArmorFind"]["armorAngleMin"]
-            self.minarmorArea = load_dict["ArmorFind"]["minarmorArea"]
-            self.maxarmorArea = load_dict["ArmorFind"]["maxarmorArea"]
-            self.minarmorProp = load_dict["ArmorFind"]["minarmorProp"]
-            self.maxarmorProp = load_dict["ArmorFind"]["maxarmorProp"]
-            self.minBigarmorProp = load_dict["ArmorFind"]["minBigarmorProp"]
-            self.maxBigarmorProp = load_dict["ArmorFind"]["maxBigarmorProp"]
-            self.angleDiff_near = load_dict["ArmorFind"]["angleDiff_near"]
-            self.angleDiff_far = load_dict["ArmorFind"]["angleDiff_far"]
-            self.minareawidthRatio = load_dict["ArmorFind"]["minareawidthRatio"]
-            self.maxareawidthRatio = load_dict["ArmorFind"]["maxareawidthRatio"]
-            self.minareaRatio = load_dict["ArmorFind"]["minareaRatio"]
-            self.maxareaRatio = load_dict["ArmorFind"]["maxareaRatio"]
-            self.area_limit = load_dict["ArmorFind"]["area_limit"]
-            self.xcenterdismax = load_dict["ArmorFind"]["xcenterdismax"]
-            self.ylengthmin = load_dict["ArmorFind"]["ylengthmin"]
-            self.ylengcenterRatio = load_dict["ArmorFind"]["ylengcenterRatio"]
-            self.yixaingangleDiff_near = load_dict["ArmorFind"]["yixaingangleDiff_near"]
-            self.yixaingangleDiff_far = load_dict["ArmorFind"]["yixaingangleDiff_far"]
-            #测距
-            self.kh = load_dict["ArmorFind"]["kh"]
-        with open('./json/Energy_find.json','r',encoding = 'utf-8') as load_f:
-            load_dict = json.load(load_f,strict=False)
-            if self.color == 0:
-                energy_hsv_low =load_dict["hsv"]["hsv_blue_low"]
-                energy_hsv_high = load_dict["hsv"]["hsv_blue_high"]
-            elif self.color == 1:
-                energy_hsv_low = load_dict["hsv"]["hsv_red_low"]
-                energy_hsv_high = load_dict["hsv"]["hsv_red_high"] 
-            else:
-                energy_hsv_high = [0,0,0]
-                energy_hsv_low = [0,0,0]
-            self.energy_h_high = energy_hsv_high[0]
-            self.energy_s_high = energy_hsv_high[1]
-            self.energy_v_high = energy_hsv_high[2]
-            self.energy_h_low = energy_hsv_low[0]
-            self.energy_s_low = energy_hsv_low[1]
-            self.energy_v_low = energy_hsv_low[2]
-            self.MaxRsS = load_dict["EnergyFind"]["MaxRsS"]
-            self.MinRsS = load_dict["EnergyFind"]["MinRsS"]
-            self.MaxRsRatio = load_dict["EnergyFind"]["MaxRsRatio"]
-            self.fan_armor_distence_max = load_dict["EnergyFind"]["fan_armor_distence_max"]
-            self.fan_armor_distence_min = load_dict["EnergyFind"]["fan_armor_distence_min"]
-            self.armor_R_distance_max = load_dict["EnergyFind"]["armor_R_distance_max"]
-            self.armor_R_distance_min = load_dict["EnergyFind"]["armor_R_distance_min"] 
         #滑动条中英文对照表
         self.name_dict = {
             'armor_h_low':'自瞄_lowHue',
@@ -201,8 +71,104 @@ class Opencv_slider(QMainWindow):
             'yixaingangleDiff_near':'近距离灯条异向角度差',
             'yixaingangleDiff_far':'远距离灯条异向角度差',
             'kh':'测距参数',
+        }
+        self.value_dict={
 
         }
+    
+
+    def init_ui(self):
+        '''
+        初始化ui,实例化需要的控件并且建立关系
+        '''
+        self.centralWidget = QWidget(self)
+        self.centralWidget.setObjectName("centralWidget")
+        desktop = QApplication.desktop()
+        self.desktop_size = QSize(int(desktop.width()),int(desktop.height()*0.9))
+        self.horizontalLayout = QHBoxLayout(self.centralWidget)
+        self.horizontalLayout.setObjectName("horizontalLayout")
+ 
+        self.tabWidget = QTabWidget(self.centralWidget)
+        self.tabWidget.setEnabled(True)
+        self.tabWidget.setMinimumSize(self.desktop_size)
+        self.tabWidget.setObjectName("tabWidget")
+        self.tabWidget.setCurrentIndex(0)
+ 
+        self.tab_1 = QWidget()
+        self.tab_1.setObjectName("tab_1")
+        self.tab_2 = QWidget()
+        self.tab_2.setObjectName("tab_2")
+        self.tab_3 = QWidget()
+        self.tab_3.setObjectName("tab_3")
+        self.tab_4 = QWidget()
+        self.tab_4.setObjectName("tab_4")
+
+        self.tabWidget.addTab(self.tab_1, "hsv调参")
+        self.tabWidget.addTab(self.tab_2, "能量机关筛选参数")
+        self.tabWidget.addTab(self.tab_3, "灯条筛选参数")
+        self.tabWidget.addTab(self.tab_4, "装甲板筛选参数")
+ 
+        self.weight_sa_1 = self.widget_contents_create(self.tab_1)
+        self.weight_sa_2 = self.widget_contents_create(self.tab_2)
+        self.weight_sa_3 = self.widget_contents_create(self.tab_3)
+        self.weight_sa_4 = self.widget_contents_create(self.tab_4)
+        self.change_label = 1
+
+        self.setCentralWidget(self.centralWidget)
+        
+
+    def get_first_vlaue(self,armor_list,energy_list):
+        #获取滑动条的初值
+        [self.armor_h_low,\
+        self.armor_s_low,\
+        self.armor_v_low,\
+        self.armor_h_high,\
+        self.armor_s_high,\
+        self.armor_v_high,\
+        self.minlighterarea,\
+        self.maxlighterarea,\
+        self.minlighterProp,\
+        self.maxlighterProp,\
+        self.minAngleError,\
+        self.maxAngleError,\
+        self.maxarealongRatio,\
+        self.minarealongRatio,\
+        self.lightBarAreaDiff,\
+        self.armorAngleMin,\
+        self.minarmorArea,\
+        self.maxarmorArea,\
+        self.minarmorProp,\
+        self.maxarmorProp,\
+        self.minBigarmorProp,\
+        self.maxBigarmorProp,\
+        self.angleDiff_near,\
+        self.angleDiff_far,\
+        self.minareawidthRatio,\
+        self.maxareawidthRatio,\
+        self.minareaRatio,\
+        self.maxareaRatio,\
+        self.area_limit,\
+        self.xcenterdismax,\
+        self.ylengthmin,\
+        self.ylengcenterRatio,\
+        self.yixaingangleDiff_near,\
+        self.yixaingangleDiff_far,\
+        self.kh] = armor_list 
+
+        [self.energy_h_low, \
+        self.energy_s_low, \
+        self.energy_v_low, \
+        self.energy_h_high, \
+        self.energy_s_high, \
+        self.energy_v_high, \
+        self.MaxRsS,\
+        self.MinRsS,\
+        self.MaxRsRatio,\
+        self.fan_armor_distence_max,\
+        self.fan_armor_distence_min,\
+        self.armor_R_distance_max,\
+        self.armor_R_distance_min] = energy_list
+
     
     def widget_contents_create(self,widget):
         '''
@@ -244,20 +210,6 @@ class Opencv_slider(QMainWindow):
         self.TrackerBar_create('armor_h_high',self.armor_h_high,255,self.weight_sa_1)
         self.TrackerBar_create('armor_s_high',self.armor_s_high,255,self.weight_sa_1)
         self.TrackerBar_create('armor_v_high',self.armor_v_high,255,self.weight_sa_1)
-        self.TrackerBar_create('energy_h_high',self.energy_h_high,255,self.weight_sa_1)
-        self.TrackerBar_create('energy_s_high',self.energy_s_high,255,self.weight_sa_1)
-        self.TrackerBar_create('energy_v_high',self.energy_v_high,255,self.weight_sa_1)
-        self.TrackerBar_create('energy_h_low',self.energy_h_low,255,self.weight_sa_1)
-        self.TrackerBar_create('energy_s_low',self.energy_s_low,255,self.weight_sa_1)
-        self.TrackerBar_create('energy_v_low',self.energy_v_low,255,self.weight_sa_1)
-
-        self.TrackerBar_create('MaxRsS',self.MaxRsS,10000,self.weight_sa_2)
-        self.TrackerBar_create('MinRsS',self.MinRsS,10000,self.weight_sa_2)
-        self.TrackerBar_create('MaxRsRatio',self.MaxRsRatio,2000,self.weight_sa_2)
-        self.TrackerBar_create('fan_armor_distence_max',self.fan_armor_distence_max,500,self.weight_sa_2)
-        self.TrackerBar_create('fan_armor_distence_min',self.fan_armor_distence_min,255,self.weight_sa_2)
-        self.TrackerBar_create('armor_R_distance_max',self.armor_R_distance_max,1000,self.weight_sa_2)
-        self.TrackerBar_create('armor_R_distance_min',self.armor_R_distance_min,500,self.weight_sa_2)
 
         self.TrackerBar_create('minlighterarea',self.minlighterarea,255,self.weight_sa_3)
         self.TrackerBar_create('maxlighterarea',self.maxlighterarea,10000,self.weight_sa_3)
@@ -290,6 +242,21 @@ class Opencv_slider(QMainWindow):
         self.TrackerBar_create('yixaingangleDiff_near', self.yixaingangleDiff_near, 10, self.weight_sa_4)
         self.TrackerBar_create('yixaingangleDiff_far', self.yixaingangleDiff_far, 10, self.weight_sa_4)
         self.TrackerBar_create('kh', self.kh, 40000, self.weight_sa_4)
+
+        self.TrackerBar_create('energy_h_high',self.energy_h_high,255,self.weight_sa_1)
+        self.TrackerBar_create('energy_s_high',self.energy_s_high,255,self.weight_sa_1)
+        self.TrackerBar_create('energy_v_high',self.energy_v_high,255,self.weight_sa_1)
+        self.TrackerBar_create('energy_h_low',self.energy_h_low,255,self.weight_sa_1)
+        self.TrackerBar_create('energy_s_low',self.energy_s_low,255,self.weight_sa_1)
+        self.TrackerBar_create('energy_v_low',self.energy_v_low,255,self.weight_sa_1)
+
+        self.TrackerBar_create('MaxRsS',self.MaxRsS,10000,self.weight_sa_2)
+        self.TrackerBar_create('MinRsS',self.MinRsS,10000,self.weight_sa_2)
+        self.TrackerBar_create('MaxRsRatio',self.MaxRsRatio,2000,self.weight_sa_2)
+        self.TrackerBar_create('fan_armor_distence_max',self.fan_armor_distence_max,500,self.weight_sa_2)
+        self.TrackerBar_create('fan_armor_distence_min',self.fan_armor_distence_min,255,self.weight_sa_2)
+        self.TrackerBar_create('armor_R_distance_max',self.armor_R_distance_max,1000,self.weight_sa_2)
+        self.TrackerBar_create('armor_R_distance_min',self.armor_R_distance_min,500,self.weight_sa_2)
     
     def TrackerBar_create(self,name,value,range_max,GroupBox):
         '''
@@ -341,21 +308,16 @@ class Opencv_slider(QMainWindow):
                 widget_btn,_,_ = temp_sa
                 widget_btn.resize(int(windows_size.width()-10),int(windows_size.height()-30))
     
-    def update_json(self):
-        '''
-        更新json里的值
-        '''
-        t0 = time.time()
-        if self.t1 == None:
-            self.t1 = t0
-        if self.t1 - t0 > 0.5:
-            self.t1 = t0
-        ...
+    def return_value_aimbot(self):
+        #返回自瞄需要的值
+        temp = [i[3] for i in self.sld]
+        return temp[0:35]
+
+    def return_value_energy(self):
+        #返回自瞄需要的值
+        temp = [i[3] for i in self.sld]
+        return temp[35:-1]
 
 
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    ex = Opencv_slider('Opencv_slider',0,0)
-    app.setStyleSheet(qdarkstyle.load_stylesheet())
-    ex.show()
-    app.exec()
+
+

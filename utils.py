@@ -148,5 +148,4 @@ if __name__ == 'utils':
     log = MyLogging()
     video_writer = MyVideoWriter()
     cout = cpp()
-    para_json = json_dict()
 

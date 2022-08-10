@@ -1,9 +1,10 @@
 numpy>=1.22
 onnx>=1.12.0
-opencv-python>=4
+opencv-python
 openvino==2022.1.0
 openvino-dev==2022.1.0
 openvino-telemetry==2022.1.1
 serial
 pyserial
 cython
+ipython

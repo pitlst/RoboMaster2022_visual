@@ -39,8 +39,11 @@ import os
 import signal
 import ctypes
 import traceback
+import qdarkstyle
 from Communication import MySerial
 from Aimbot import GetArmor
+from interface import Opencv_slider
+from PyQt5.QtWidgets import QApplication
 from utils import log, video_writer, cout, endl
 #默认设置输出等级为debug
 log.set_level(1)
@@ -103,6 +106,8 @@ class Main:
         if self.video_writer_debug:
             video_writer.set_mode(self.mode_init)
             log.print_info('video writer init done')
+        if self.debug:
+            self.slider = Opencv_slider('Opencv_slider')
         log.print_info('all module init done')
  
 
@@ -179,9 +184,15 @@ class Main:
                     msg_temp = list(self.AnglePredicted_class.NormalHit(msg_temp,f_time))
             #串口发送消息
             self.MySerial_class.send_message(msg_temp)
+    
+    def pyqt_show(self):
+        #pyqt显示用的主线程
+        app = QApplication(sys.argv)
+        app.setStyleSheet(qdarkstyle.load_stylesheet())
+        self.slider.show()
+        app.exec()
 
-
-    def debug_show(self):
+    def debug_process(self):
         #debug显示线程
         label = int(self.debug)
         timeout = self.timeout
